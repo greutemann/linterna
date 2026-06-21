@@ -24,3 +24,6 @@ htmlcov/
 .DS_Store
 .idea/
 .vscode/
+
+# Config local de Claude Code (permisos por máquina)
+.claude/settings.local.json
