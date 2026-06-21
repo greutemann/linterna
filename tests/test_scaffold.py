@@ -3,7 +3,7 @@
 No prueba lógica (todavía no hay). Garantiza que la estructura del paquete carga.
 """
 
-from linterna.router import BudgetExceeded, LLMClient, LLMResult, ProviderUnavailable
+from linterna.router import BudgetExceeded, LLMClient, ProviderUnavailable
 from linterna.types import Light, Verdict, VerificationResult
 
 

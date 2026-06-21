@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(winget list --id Python.Python.3.12 2>&1 | Select-Object -Last 5; echo \"===\"; Get-ChildItem \"$env:LOCALAPPDATA\\\\Programs\\\\Python\" -ErrorAction SilentlyContinue | Select-Object Name)",
+      "Bash(git add *)",
+      "Bash(git -c user.name=Linterna -c user.email=greutemann@gmail.com commit -q -m ' *)"
+    ]
+  }
+}
