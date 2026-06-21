@@ -27,7 +27,17 @@ sin razonamiento generativo. La mayoría de las falsedades se reciclan: muchas s
 4. **Caché.** Una segunda consulta idéntica no vuelve a pegarle a la API.
 5. **Sin PII.** Lo persistido es la afirmación y su caché, jamás identidad del usuario.
 
+## Estado
+
+- ✅ `ArchiveVerifier` (pipeline caché → proveedor → validación → veredicto/abstención).
+- ✅ Validador determinístico de citas (`assert_all_recovered`).
+- ✅ `InMemoryCache` sin PII.
+- ✅ Adaptador real **Google Fact Check Tools API** (`GoogleFactCheckProvider`), con
+  transporte HTTP inyectable (stdlib `urllib`, sin dependencias nuevas).
+
 ## Pendiente de decidir
 
-- Esquema y backend de la caché (archivo plano vs SQLite).
+- Esquema y backend de la caché (archivo plano vs SQLite); hoy es en memoria.
 - Política de expiración / *staleness* de verificaciones cacheadas.
+- Manejo de errores de red / rate-limit de la API (reintentos, *backoff*).
+- Configuración de la API key vía entorno (no versionar — invariante 6/7).
