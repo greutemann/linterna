@@ -1,0 +1,20 @@
+# Configuración de ejemplo (no normativa). Copiar a config.local.yaml y ajustar.
+# Cambiar de modelo/proveedor debe ser SOLO editar este archivo (invariante 1 y 7).
+
+budget:
+  daily_usd_hard_cap: 5.00          # superar esto -> BudgetExceeded, sin excepción
+
+routing:
+  claim_extraction:
+    primary: groq/llama-3.x          # barato/rápido
+    fallback: [together/llama-3.x, openrouter/auto]
+  synthesis:
+    primary: <modelo capaz>
+    fallback: [<alternativa open-weight>, <alternativa cerrada>]
+
+limits:
+  request_timeout_s: 30
+  max_retries: 2
+
+observability:
+  log_pii: false                     # invariante 6: jamás texto identificable del usuario
