@@ -28,6 +28,17 @@ class Light(str, Enum):
     GREY = "gris"  # abstención
 
 
+def light_for(verdict: Verdict) -> Light:
+    """Semáforo canónico para un veredicto. Fuente única para todo el pipeline."""
+    return {
+        Verdict.TRUE: Light.GREEN,
+        Verdict.FALSE: Light.RED,
+        Verdict.MISLEADING: Light.YELLOW,
+        Verdict.DISPUTED: Light.YELLOW,
+        Verdict.INSUFFICIENT: Light.GREY,
+    }[verdict]
+
+
 @dataclass(frozen=True)
 class Source:
     """Una fuente recuperada. Toda cita debe apuntar a una de estas (invariante 3)."""
