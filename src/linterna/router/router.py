@@ -25,6 +25,20 @@ logger = logging.getLogger("linterna.router")
 CompletionFn = Callable[..., Any]
 CostFn = Callable[[Any], float]
 
+# Códigos HTTP transitorios: vale la pena reintentar el mismo modelo. El resto (4xx
+# como 401/400) es fatal — reintentar no ayuda, mejor pasar directo al fallback.
+_RETRYABLE_STATUS = frozenset({408, 429, 500, 502, 503, 504})
+
+
+def _is_retryable(exc: Exception) -> bool:
+    if isinstance(exc, (TimeoutError, ConnectionError)):
+        return True
+    status = getattr(exc, "status_code", None)
+    if isinstance(status, int):
+        return status in _RETRYABLE_STATUS
+    # Sin código y sin tipo conocido: tratamos como transitorio (conservador).
+    return True
+
 
 def _default_completion(**kwargs: Any) -> Any:
     import litellm  # import perezoso: solo si se usa el proveedor real
@@ -103,7 +117,7 @@ class RouterClient:
     ) -> Any:
         attempts = self._config.limits.max_retries + 1
         last_error: Exception | None = None
-        for _attempt in range(attempts):
+        for attempt in range(attempts):
             try:
                 return self._completion(
                     model=model,
@@ -111,7 +125,10 @@ class RouterClient:
                     max_tokens=max_tokens,
                     timeout=self._config.limits.request_timeout_s,
                 )
-            except Exception as exc:  # noqa: BLE001 (reintento acotado ante cualquier fallo)
+            except Exception as exc:  # noqa: BLE001 (clasificamos abajo)
                 last_error = exc
-        assert last_error is not None
-        raise last_error
+                # Error fatal: no insistir en este modelo, pasar al fallback ya.
+                if not _is_retryable(exc) or attempt == attempts - 1:
+                    raise
+        assert last_error is not None  # pragma: no cover
+        raise last_error  # pragma: no cover

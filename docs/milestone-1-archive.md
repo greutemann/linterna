@@ -35,9 +35,13 @@ sin razonamiento generativo. La mayoría de las falsedades se reciclan: muchas s
 - ✅ Adaptador real **Google Fact Check Tools API** (`GoogleFactCheckProvider`), con
   transporte HTTP inyectable (stdlib `urllib`, sin dependencias nuevas).
 
+- ✅ Manejo de errores de red / rate-limit: retry acotado con *backoff* para transitorios
+  (429/5xx/red), fatal inmediato para 4xx, y `ArchiveProviderError` (un fallo de infra
+  NO se disfraza de abstención).
+- ✅ Caché persistente en disco (`JsonFileCache`), además de `InMemoryCache`.
+- ✅ Config de la API key vía entorno (`config.py`, `api_keys.env` gitignoreado).
+
 ## Pendiente de decidir
 
-- Esquema y backend de la caché (archivo plano vs SQLite); hoy es en memoria.
+- Migrar la caché a SQLite si el JSON plano queda corto (hoy: JSON o memoria).
 - Política de expiración / *staleness* de verificaciones cacheadas.
-- Manejo de errores de red / rate-limit de la API (reintentos, *backoff*).
-- Configuración de la API key vía entorno (no versionar — invariante 6/7).
