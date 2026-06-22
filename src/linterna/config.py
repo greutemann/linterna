@@ -11,6 +11,7 @@ from pathlib import Path
 
 GOOGLE_FACTCHECK_API_KEY_ENV = "GOOGLE_FACTCHECK_API_KEY"
 GEMINI_API_KEY_ENV = "GEMINI_API_KEY"
+BRAVE_API_KEY_ENV = "BRAVE_API_KEY"
 
 # Raíz del repo: este archivo está en src/linterna/config.py
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -58,4 +59,12 @@ def gemini_api_key() -> str:
     return _require(
         GEMINI_API_KEY_ENV,
         "Es la 'Generative Language API Key' en https://aistudio.google.com/apikey.",
+    )
+
+
+def brave_api_key() -> str:
+    """Devuelve la API key de Brave Search. Para el retriever de evidencia (M3)."""
+    return _require(
+        BRAVE_API_KEY_ENV,
+        "Conseguila en https://api-dashboard.search.brave.com (plan Search).",
     )

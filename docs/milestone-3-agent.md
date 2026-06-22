@@ -24,8 +24,17 @@ valida contra lo efectivamente recuperado. Si nada valida, se abstiene.
 (recupera → arma prompt → llama al router → parsea → valida citas → veredicto/abstención),
 y el `LinternaPipeline` que encadena archivo-primero (M1) y el agente (M3).
 
-**No incluye:** un adaptador concreto de búsqueda (Tavily/Brave/curado) — se enchufa
-después sin tocar la lógica. Tampoco la UX (M4).
+**No incluye:** la UX (M4).
+
+### Adaptador de evidencia
+
+Se eligió **Brave Search API** por su índice web **propio e independiente** (no un
+reempaquetador de terceros), alineado con el invariante 7 y con la tesis de
+auditabilidad. Como Brave factura por uso **sin corte de gasto**, el adaptador se envuelve
+en un `SearchBudget` con **tope duro en código** (la defensa que el proveedor no da): pasado
+el límite diario de búsquedas se lanza `SearchBudgetExceeded` antes de llamar. La key se
+lee de `BRAVE_API_KEY` (`api_keys.env`, gitignoreado). Otros retrievers (Tavily, curados)
+pueden sumarse bajo el mismo contrato `EvidenceRetriever`.
 
 ## Contrato de evidencia (orientativo)
 
