@@ -63,3 +63,21 @@ def test_archive_miss_delegates_to_agent() -> None:
 
     assert result.verdict is Verdict.TRUE  # vino del agente
     assert agent.calls == 1
+
+
+def test_agent_result_is_not_cached() -> None:
+    # COMPLIANCE Brave: la evidencia del agente NO debe persistirse en la caché.
+    cache = InMemoryCache()
+    verifier = ArchiveVerifier(provider=ArchiveProvider([]), cache=cache)
+    agent = StubInvestigator(_AGENT_RESULT)
+    pipeline = LinternaPipeline(archive=verifier, investigator=agent)
+
+    pipeline.verify("afirmación nueva que va al agente")
+
+    # La caché puede tener la abstención del archivo, pero NUNCA las fuentes del agente.
+    cached_results = [cache.get(k) for k in cache.keys()]
+    for result in cached_results:
+        assert result is not None
+        for source in result.sources:
+            assert source.url != "https://x/y"  # url derivada del retriever
+        assert result.verdict is Verdict.INSUFFICIENT  # solo la abstención del archivo

@@ -36,6 +36,15 @@ el límite diario de búsquedas se lanza `SearchBudgetExceeded` antes de llamar.
 lee de `BRAVE_API_KEY` (`api_keys.env`, gitignoreado). Otros retrievers (Tavily, curados)
 pueden sumarse bajo el mismo contrato `EvidenceRetriever`.
 
+### Compliance con los términos de Brave
+
+Brave prohíbe almacenar/reutilizar/revender las respuestas de su API (permite inferencia
+de IA durante la suscripción). Por eso la evidencia del agente **nunca se persiste a
+disco**; la caché persistente es solo para el archivo (ClaimReview público). Como decisión
+deliberada del dueño del proyecto, se admite un **caché efímero en memoria con TTL corto**
+(`EphemeralCachingRetriever`) para deduplicar búsquedas repetidas en una ventana breve —
+un "gris permitible" de footprint mínimo, no un corpus persistente.
+
 ## Contrato de evidencia (orientativo)
 
 ```python
