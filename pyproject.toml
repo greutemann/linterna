@@ -5,7 +5,10 @@ description = "Capa pública y auditable de acceso a la verificación de informa
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "AGPL-3.0-or-later" }  # tradeoff abierto — ver README
-dependencies = []
+dependencies = [
+    "pyyaml>=6",      # carga de config del router (M2)
+    "litellm>=1.40",  # capa de abstracción de modelos (M2), import perezoso
+]
 
 [project.optional-dependencies]
 dev = [
@@ -13,6 +16,7 @@ dev = [
     "pytest-cov",
     "ruff",
     "mypy",
+    "types-PyYAML",
 ]
 
 [build-system]

@@ -1,0 +1,22 @@
+# Config real del router (M2). Sin secretos — la key se lee de api_keys.env.
+# Cambiar de modelo/proveedor = editar este archivo, nunca código (invariantes 1 y 7).
+# LiteLLM usa el prefijo "gemini/" y lee GEMINI_API_KEY del entorno.
+
+budget:
+  daily_usd_hard_cap: 5.00            # superar esto -> BudgetExceeded, sin llamada
+
+routing:
+  claim_extraction:                   # barato/rápido: extraer afirmaciones
+    primary: gemini/gemini-2.5-flash-lite
+    fallback: []
+  synthesis:                          # razonar/redactar sobre evidencia recuperada
+    primary: gemini/gemini-2.5-flash
+    fallback:
+      - gemini/gemini-2.5-pro
+
+limits:
+  request_timeout_s: 30
+  max_retries: 2
+
+observability:
+  log_pii: false                      # invariante 6: jamás texto identificable del usuario
