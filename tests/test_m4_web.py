@@ -90,3 +90,13 @@ def test_index_page_served() -> None:
     assert "fuentes" in resp.text.lower()
     # Mantiene a la vista la afirmación consultada junto a los resultados.
     assert "Afirmación consultada" in resp.text
+
+
+def test_privacy_page_served() -> None:
+    client, _p = _client(_VERDICT_RESULT)
+    resp = client.get("/privacy")
+    assert resp.status_code == 200
+    assert "text/html" in resp.headers["content-type"]
+    # Disclosure clave para la Chrome Web Store: qué se manda y que no hay PII.
+    assert "privacidad" in resp.text.lower()
+    assert "pii" in resp.text.lower()

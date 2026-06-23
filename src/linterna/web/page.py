@@ -7,6 +7,68 @@ válida, presentada con calma, no como error.
 
 from __future__ import annotations
 
+PRIVACY_HTML = """<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Linterna — Política de privacidad</title>
+<style>
+  body{font-family:system-ui,sans-serif;max-width:720px;margin:0 auto;padding:48px 20px 80px;
+       color:#1a1a1a;line-height:1.6;background:#fbfbfa;}
+  h1{font-size:1.8rem;} h2{font-size:1.15rem;margin-top:28px;}
+  .muted{color:#6b7280;} a{color:#2563eb;}
+  code{background:#eef;padding:1px 5px;border-radius:4px;}
+</style>
+</head>
+<body>
+  <h1>Política de privacidad — Linterna 🔦</h1>
+  <p class="muted">Última actualización: 2026-06-22</p>
+
+  <p>Linterna es un servicio público y open-source de verificación de información. Esta
+  política describe qué datos maneja el servicio web y la extensión de navegador.</p>
+
+  <h2>Qué datos recibimos</h2>
+  <p>Únicamente <strong>la afirmación (texto) que vos elegís verificar</strong> — ya sea
+  escribiéndola en la web o seleccionándola en una página y usando el menú contextual de la
+  extensión. Nada más.</p>
+
+  <h2>Qué NO hacemos</h2>
+  <ul>
+    <li>No te pedimos cuenta, login ni datos personales.</li>
+    <li>No guardamos datos personales identificables (<strong>cero PII</strong>): ninguna
+    consulta se asocia a tu identidad.</li>
+    <li>No usamos cookies de seguimiento, no hacemos perfiles, no mostramos publicidad.</li>
+    <li>No vendemos ni cedemos datos a terceros con fines comerciales.</li>
+  </ul>
+
+  <h2>Cómo se procesa tu consulta</h2>
+  <p>Para verificar una afirmación, el servicio consulta fuentes externas: la API de
+  <strong>Google Fact Check Tools</strong> (verificaciones humanas previas), y —si no hay
+  verificación previa— el buscador <strong>Brave Search</strong> (evidencia) y el modelo
+  <strong>Google Gemini</strong> (razonamiento sobre esa evidencia). El texto de tu
+  afirmación se envía a esos servicios solo para resolver la consulta; su tratamiento se
+  rige por las políticas de cada proveedor. La evidencia recuperada de Brave no se persiste.</p>
+
+  <h2>Almacenamiento</h2>
+  <p>Se cachea la afirmación y su resultado de verificación (sin identidad asociada) para
+  no repetir trabajo. Ningún registro contiene texto identificable del usuario.</p>
+
+  <h2>La extensión</h2>
+  <p>La extensión solo envía el texto que seleccionás a este servicio de Linterna. Guarda
+  localmente (en tu navegador) la dirección del servicio configurada. No accede a otros
+  datos de las páginas que visitás.</p>
+
+  <h2>Código abierto</h2>
+  <p>El método es público y auditable. Podés revisar exactamente qué hace el código.</p>
+
+  <h2>Contacto</h2>
+  <p>Ante dudas o para reportar un problema, escribí a
+  <a href="mailto:greutemann@gmail.com">greutemann@gmail.com</a>.</p>
+</body>
+</html>
+"""
+
 INDEX_HTML = """<!doctype html>
 <html lang="es">
 <head>

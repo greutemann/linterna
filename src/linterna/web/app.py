@@ -18,7 +18,7 @@ from pydantic import BaseModel, field_validator
 
 from linterna.types import Verdict, VerificationResult
 
-from .page import INDEX_HTML
+from .page import INDEX_HTML, PRIVACY_HTML
 
 
 class _RateLimiter:
@@ -102,5 +102,9 @@ def create_app(
     @app.get("/", response_class=HTMLResponse)
     def index() -> str:
         return INDEX_HTML
+
+    @app.get("/privacy", response_class=HTMLResponse)
+    def privacy() -> str:
+        return PRIVACY_HTML
 
     return app
