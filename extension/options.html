@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<title>Linterna — opciones</title>
+<style>
+  body{font-family:system-ui,sans-serif;max-width:480px;margin:40px auto;padding:0 16px;color:#1a1a1a;}
+  label{display:block;font-weight:600;margin-bottom:6px;}
+  input{width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:8px;font-size:1rem;}
+  button{margin-top:12px;padding:10px 16px;border:0;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer;}
+  .muted{color:#6b7280;font-size:.9rem;}
+  #saved{color:#16a34a;margin-left:10px;}
+</style>
+</head>
+<body>
+  <h1>Linterna 🔦</h1>
+  <label for="endpoint">Endpoint de la API</label>
+  <input id="endpoint" placeholder="http://127.0.0.1:8000"/>
+  <p class="muted">Dónde corre el servicio de Linterna (<code>python -m linterna.web</code>).</p>
+  <button id="save">Guardar</button><span id="saved"></span>
+  <script src="options.js"></script>
+</body>
+</html>
