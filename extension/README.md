@@ -22,8 +22,8 @@ python -m linterna.web        # queda en http://127.0.0.1:8000
 3. **"Cargar descomprimida"** → elegí esta carpeta `extension/`.
 4. Listo. Seleccioná texto en cualquier página y usá el menú contextual.
 
-> Si una pestaña estaba abierta **antes** de instalar la extensión, recargala (el content
-> script se inyecta al cargar la página).
+> No usa content scripts ni permisos de host amplios. El panel se inyecta a demanda
+> (`activeTab` + `scripting`) solo en la pestaña donde activás el gesto.
 
 ## Configurar el endpoint
 

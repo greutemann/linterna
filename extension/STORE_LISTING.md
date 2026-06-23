@@ -36,8 +36,9 @@ https://linterna-498857011078.southamerica-east1.run.app/privacy
 
 - **contextMenus**: agregar la opción "Verificar con Linterna" al menú contextual cuando hay texto seleccionado.
 - **storage**: recordar la dirección del servicio de Linterna configurada por el usuario (nada más).
+- **activeTab**: acceder a la pestaña activa únicamente cuando el usuario activa el gesto de verificación, para mostrar el panel de resultados ahí.
+- **scripting**: inyectar el panel de resultados en la pestaña activa, a demanda, en respuesta a la acción explícita del usuario.
 - **host permission (…run.app / localhost)**: enviar el texto seleccionado a la API de Linterna para verificarlo.
-- **acceso a `<all_urls>` (content script)**: el gesto de verificación debe poder usarse en cualquier página que el usuario esté leyendo. El content script solo inyecta el panel de resultados cuando el usuario activa la verificación explícitamente; no lee ni envía contenido de la página por su cuenta.
 - **Remote code**: no se usa código remoto.
 - **Single purpose**: verificar una afirmación seleccionada contra el servicio de Linterna.
 
