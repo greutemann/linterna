@@ -43,6 +43,10 @@ INDEX_HTML = """<!doctype html>
   .verdict { font-size:1.3rem; font-weight:700; text-transform:capitalize; }
   .note { color:var(--muted); font-size:.9rem; margin-top:10px; }
   .muted { color:var(--muted); }
+  .asked { border-left:3px solid var(--accent); padding:6px 0 6px 14px; margin:0 0 16px;
+           font-size:1.05rem; }
+  .asked .lbl { display:block; color:var(--muted); font-size:.78rem; text-transform:uppercase;
+                letter-spacing:.04em; margin-bottom:2px; }
 </style>
 </head>
 <body>
@@ -73,13 +77,17 @@ f.addEventListener('submit', async (e) => {
       body: JSON.stringify({claim})
     });
     if (!r.ok) { out.innerHTML = '<p class="muted">No se pudo verificar ahora. Probá de nuevo.</p>'; return; }
-    render(await r.json());
+    render(await r.json(), claim);
   } catch { out.innerHTML = '<p class="muted">Error de conexión.</p>'; }
 });
 
-function render(d) {
+function asked(claim) {
+  return `<p class="asked"><span class="lbl">Afirmación consultada</span>${escapeHtml(claim)}</p>`;
+}
+
+function render(d, claim) {
   if (d.is_abstention) {
-    out.innerHTML = `<div class="card">
+    out.innerHTML = asked(claim) + `<div class="card">
       <p class="lead">Sin evidencia suficiente</p>
       <p>No encontramos verificaciones ni evidencia validada para concluir.
          <strong>Y eso es una respuesta válida</strong>, no una falla.</p>
@@ -94,7 +102,7 @@ function render(d) {
       <div class="pub">${escapeHtml(s.publisher)}${s.reviewed_at ? ' · ' + escapeHtml(s.reviewed_at) : ''}</div>
     </div>`).join('');
 
-  out.innerHTML = `
+  out.innerHTML = asked(claim) + `
     <div class="card">
       <p class="lead">Esto es lo que encontramos — leelo y formá tu criterio</p>
       ${sources}

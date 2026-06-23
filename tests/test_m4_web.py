@@ -88,3 +88,5 @@ def test_index_page_served() -> None:
     assert "text/html" in resp.headers["content-type"]
     # La postura socrática está en la página: muestra fuentes, no sentencia.
     assert "fuentes" in resp.text.lower()
+    # Mantiene a la vista la afirmación consultada junto a los resultados.
+    assert "Afirmación consultada" in resp.text
