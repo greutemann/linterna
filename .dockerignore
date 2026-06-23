@@ -1,0 +1,28 @@
+# CRÍTICO: los secretos jamás entran a la imagen.
+api_keys.env
+*.env
+.env
+.env.*
+
+# Entornos, caché y artefactos
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+.cache/
+
+# Control de versiones y config local
+.git/
+.gitignore
+.claude/
+
+# No hace falta en runtime
+tests/
+docs/
+extension/
+scripts/
