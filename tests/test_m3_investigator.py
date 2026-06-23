@@ -31,7 +31,9 @@ class FakeLLM:
         self.last_messages: list[Message] | None = None
         self.calls = 0
 
-    def complete(self, task: str, messages: list[Message], *, max_tokens: int) -> LLMResult:
+    def complete(
+        self, task: str, messages: list[Message], *, max_tokens: int, json_mode: bool = False
+    ) -> LLMResult:
         self.calls += 1
         self.last_messages = messages
         return LLMResult(

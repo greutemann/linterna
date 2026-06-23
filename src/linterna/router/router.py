@@ -75,6 +75,7 @@ class RouterClient:
         messages: list[Message],
         *,
         max_tokens: int,
+        json_mode: bool = False,
     ) -> LLMResult:
         # Corte duro de presupuesto ANTES de cualquier llamada.
         self._budget.ensure_within_cap()
@@ -85,7 +86,7 @@ class RouterClient:
 
         for model in chain:
             try:
-                response = self._call_with_retries(model, payload, max_tokens)
+                response = self._call_with_retries(model, payload, max_tokens, json_mode)
             except Exception as exc:  # noqa: BLE001 (cualquier fallo -> probar el siguiente)
                 last_error = exc
                 logger.warning(
@@ -113,8 +114,13 @@ class RouterClient:
         ) from last_error
 
     def _call_with_retries(
-        self, model: str, payload: list[dict[str, str]], max_tokens: int
+        self, model: str, payload: list[dict[str, str]], max_tokens: int, json_mode: bool
     ) -> Any:
+        extra: dict[str, Any] = {}
+        if json_mode:
+            # Salida estructurada: el proveedor garantiza JSON parseable.
+            extra["response_format"] = {"type": "json_object"}
+
         attempts = self._config.limits.max_retries + 1
         last_error: Exception | None = None
         for attempt in range(attempts):
@@ -124,6 +130,7 @@ class RouterClient:
                     messages=payload,
                     max_tokens=max_tokens,
                     timeout=self._config.limits.request_timeout_s,
+                    **extra,
                 )
             except Exception as exc:  # noqa: BLE001 (clasificamos abajo)
                 last_error = exc

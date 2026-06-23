@@ -53,8 +53,13 @@ class LLMClient(Protocol):
         messages: list[Message],
         *,
         max_tokens: int,
+        json_mode: bool = False,
     ) -> LLMResult:
         """Resuelve una llamada al LLM aplicando ruteo por tarea, fallback y presupuesto.
+
+        Con ``json_mode=True`` se pide salida estructurada (JSON) al proveedor, para que
+        la respuesta sea parseable de forma confiable. No reemplaza la validación de citas
+        (invariante 3), que sigue siendo determinística aguas abajo.
 
         Lanza ``BudgetExceeded`` (corte duro) o ``ProviderUnavailable`` (tras agotar fallbacks).
         """

@@ -49,7 +49,11 @@ class InvestigatorAgent:
             return _abstain("No se recuperó evidencia para esta afirmación.")
 
         messages = self._build_messages(claim, evidence)
-        result = self._llm.complete("synthesis", messages, max_tokens=self._max_tokens)
+        # json_mode: pedimos salida estructurada para que la respuesta sea parseable de
+        # forma confiable. La validación de citas (invariante 3) sigue determinística.
+        result = self._llm.complete(
+            "synthesis", messages, max_tokens=self._max_tokens, json_mode=True
+        )
 
         parsed = _parse_response(result.text)
         if parsed is None:
