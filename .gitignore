@@ -29,3 +29,6 @@ api_keys.env
 
 # Config local de Claude Code (permisos por máquina)
 .claude/settings.local.json
+
+# Paquete de la extensión (artefacto de build)
+linterna-extension.zip
