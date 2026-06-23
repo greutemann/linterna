@@ -1,0 +1,122 @@
+"""Página socrática de Linterna (HTML+JS mínimo, sin build step).
+
+Postura de diseño: evidencia primero. Las fuentes se muestran siempre; el veredicto hay
+que pedirlo ("mostrame las fuentes y dejame pensar"). La abstención es una respuesta
+válida, presentada con calma, no como error.
+"""
+
+from __future__ import annotations
+
+INDEX_HTML = """<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Linterna — verificación de información</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1a1a1a; --muted:#6b7280; --line:#e5e7eb; --accent:#2563eb; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, sans-serif; background:var(--bg); color:var(--fg);
+         line-height:1.5; }
+  main { max-width: 680px; margin: 0 auto; padding: 48px 20px 80px; }
+  h1 { font-size: 1.9rem; margin: 0 0 4px; }
+  .tag { color: var(--muted); margin: 0 0 28px; }
+  form { display:flex; gap:8px; }
+  input { flex:1; padding:12px 14px; font-size:1rem; border:1px solid var(--line);
+          border-radius:10px; background:#fff; }
+  button { padding:12px 18px; font-size:1rem; border:0; border-radius:10px;
+           background:var(--accent); color:#fff; cursor:pointer; }
+  button.ghost { background:transparent; color:var(--accent); border:1px solid var(--accent); }
+  #out { margin-top:28px; }
+  .card { border:1px solid var(--line); border-radius:12px; padding:18px 20px; background:#fff;
+          margin-bottom:14px; }
+  .lead { font-size:.85rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted);
+          margin:0 0 10px; }
+  .src { padding:10px 0; border-top:1px solid var(--line); }
+  .src:first-child { border-top:0; }
+  .src a { color:var(--accent); text-decoration:none; font-weight:600; }
+  .src .pub { color:var(--muted); font-size:.85rem; }
+  .dot { display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:8px;
+         vertical-align:middle; }
+  .verde{background:#16a34a;} .amarillo{background:#d97706;} .rojo{background:#dc2626;}
+  .gris{background:#9ca3af;}
+  .verdict { font-size:1.3rem; font-weight:700; text-transform:capitalize; }
+  .note { color:var(--muted); font-size:.9rem; margin-top:10px; }
+  .muted { color:var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Linterna 🔦</h1>
+  <p class="tag">No es un oráculo. Te muestra las fuentes; la conclusión es tuya.</p>
+
+  <form id="f">
+    <input id="claim" placeholder="Pegá una afirmación para verificar…" autocomplete="off"/>
+    <button type="submit">Buscar evidencia</button>
+  </form>
+
+  <div id="out"></div>
+</main>
+
+<script>
+const f = document.getElementById('f');
+const out = document.getElementById('out');
+
+f.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const claim = document.getElementById('claim').value.trim();
+  if (!claim) return;
+  out.innerHTML = '<p class="muted">Buscando evidencia…</p>';
+  try {
+    const r = await fetch('/api/verify', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({claim})
+    });
+    if (!r.ok) { out.innerHTML = '<p class="muted">No se pudo verificar ahora. Probá de nuevo.</p>'; return; }
+    render(await r.json());
+  } catch { out.innerHTML = '<p class="muted">Error de conexión.</p>'; }
+});
+
+function render(d) {
+  if (d.is_abstention) {
+    out.innerHTML = `<div class="card">
+      <p class="lead">Sin evidencia suficiente</p>
+      <p>No encontramos verificaciones ni evidencia validada para concluir.
+         <strong>Y eso es una respuesta válida</strong>, no una falla.</p>
+      <p class="note">${escapeHtml(d.explanation)}</p>
+    </div>`;
+    return;
+  }
+
+  const sources = d.sources.map(s => `
+    <div class="src">
+      <a href="${encodeURI(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.title || s.url)}</a>
+      <div class="pub">${escapeHtml(s.publisher)}${s.reviewed_at ? ' · ' + escapeHtml(s.reviewed_at) : ''}</div>
+    </div>`).join('');
+
+  out.innerHTML = `
+    <div class="card">
+      <p class="lead">Esto es lo que encontramos — leelo y formá tu criterio</p>
+      ${sources}
+    </div>
+    <button class="ghost" id="reveal">Mostrar lo que concluyen las fuentes →</button>
+    <div id="v"></div>`;
+
+  document.getElementById('reveal').addEventListener('click', (e) => {
+    e.target.style.display = 'none';
+    document.getElementById('v').innerHTML = `<div class="card">
+      <p><span class="dot ${escapeHtml(d.light)}"></span><span class="verdict">${escapeHtml(d.verdict)}</span></p>
+      <p>${escapeHtml(d.explanation)}</p>
+      <p class="note">Esto es lo que concluyen las fuentes citadas. La decisión final es tuya.</p>
+    </div>`;
+  });
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+</script>
+</body>
+</html>
+"""

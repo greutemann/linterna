@@ -8,6 +8,8 @@ license = { text = "AGPL-3.0-or-later" }  # tradeoff abierto — ver README
 dependencies = [
     "pyyaml>=6",      # carga de config del router (M2)
     "litellm>=1.40",  # capa de abstracción de modelos (M2), import perezoso
+    "fastapi>=0.110",       # API web del servicio público (M4)
+    "uvicorn[standard]>=0.27",  # servidor ASGI para correr la API
 ]
 
 [project.optional-dependencies]
@@ -17,6 +19,7 @@ dev = [
     "ruff",
     "mypy",
     "types-PyYAML",
+    "httpx",  # requerido por fastapi TestClient
 ]
 
 [build-system]
