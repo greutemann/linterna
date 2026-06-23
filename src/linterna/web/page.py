@@ -105,6 +105,12 @@ INDEX_HTML = """<!doctype html>
   .verdict { font-size:1.3rem; font-weight:700; text-transform:capitalize; }
   .note { color:var(--muted); font-size:.9rem; margin-top:10px; }
   .muted { color:var(--muted); }
+  .how { margin-top:40px; border:1px solid var(--line); border-radius:12px; padding:6px 18px;
+         background:#fff; }
+  .how summary { cursor:pointer; padding:12px 0; font-weight:600; }
+  .how ol { padding-left:20px; } .how li { margin:8px 0; }
+  .foot { margin-top:28px; font-size:.85rem; }
+  .foot a { color:var(--accent); text-decoration:none; }
   .asked { border-left:3px solid var(--accent); padding:6px 0 6px 14px; margin:0 0 16px;
            font-size:1.05rem; }
   .asked .lbl { display:block; color:var(--muted); font-size:.78rem; text-transform:uppercase;
@@ -122,6 +128,32 @@ INDEX_HTML = """<!doctype html>
   </form>
 
   <div id="out"></div>
+
+  <details class="how">
+    <summary>¿Cómo verificamos? <span class="muted">(y por qué no somos un oráculo)</span></summary>
+    <p>Linterna no te da “la verdad”. Te muestra qué dicen las fuentes y te deja decidir.
+       Así trabaja, paso a paso:</p>
+    <ol>
+      <li><strong>Primero, el archivo.</strong> Busca si periodistas y organizaciones de
+          verificación ya chequearon esa afirmación. Si existe, te muestra su veredicto y el
+          enlace. (La mayoría de las falsedades se reciclan: muchas se resuelven acá.)</li>
+      <li><strong>Si nadie la verificó antes, busca evidencia.</strong> Recupera fuentes de
+          la web sobre el tema.</li>
+      <li><strong>Un modelo de IA razona solo sobre esa evidencia.</strong> Nunca aporta
+          datos de su “memoria”: ordena y explica lo que las fuentes dicen, nada más.</li>
+      <li><strong>Validación automática de citas.</strong> Antes de mostrarte nada, el código
+          comprueba que cada fuente citada sea real y efectivamente encontrada. Una cita
+          inventada se rechaza.</li>
+      <li><strong>Si no alcanza, se abstiene.</strong> Cuando no hay evidencia suficiente te
+          lo dice (“insuficiente”). Preferimos no responder antes que inventar.</li>
+    </ol>
+    <p class="muted">La confianza vive en este método —público y auditable—, no en el modelo
+       de IA, que es reemplazable. Código abierto de punta a punta.</p>
+  </details>
+
+  <footer class="foot">
+    <a href="/privacy">Privacidad</a> · <span class="muted">Servicio público · cero PII · open-source</span>
+  </footer>
 </main>
 
 <script>

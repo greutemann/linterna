@@ -1,7 +1,8 @@
 """Genera los íconos de la extensión (linterna proyectando un haz).
 
-Dibuja a alta resolución y reescala con LANCZOS para bordes suaves. Reproducible: los
-íconos son código, no binarios opacos. Uso:  python scripts/make_icons.py
+Si existe una imagen fuente (`icon-source.png` en la raíz del repo), la reescala a los
+tamaños que pide Chrome. Si no, dibuja una de respaldo. Reescala con LANCZOS para bordes
+suaves. Uso:  python scripts/make_icons.py
 """
 
 from __future__ import annotations
@@ -10,7 +11,9 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
-_OUT = Path(__file__).resolve().parents[1] / "extension" / "icons"
+_ROOT = Path(__file__).resolve().parents[1]
+_OUT = _ROOT / "extension" / "icons"
+_SOURCE = _ROOT / "icon-source.png"
 _S = 512  # lienzo de trabajo
 _SIZES = [16, 32, 48, 128]
 
@@ -39,10 +42,15 @@ def _draw() -> Image.Image:
 
 def main() -> int:
     _OUT.mkdir(parents=True, exist_ok=True)
-    base = _draw()
+    if _SOURCE.is_file():
+        base = Image.open(_SOURCE).convert("RGBA")
+        origen = f"fuente {_SOURCE.name}"
+    else:
+        base = _draw()
+        origen = "respaldo dibujado"
     for size in _SIZES:
         base.resize((size, size), Image.LANCZOS).save(_OUT / f"icon{size}.png")
-    print(f"Íconos generados en {_OUT}: {', '.join(f'icon{s}.png' for s in _SIZES)}")
+    print(f"Íconos generados desde {origen}: {', '.join(f'icon{s}.png' for s in _SIZES)}")
     return 0
 
 

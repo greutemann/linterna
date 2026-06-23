@@ -90,6 +90,8 @@ def test_index_page_served() -> None:
     assert "fuentes" in resp.text.lower()
     # Mantiene a la vista la afirmación consultada junto a los resultados.
     assert "Afirmación consultada" in resp.text
+    # Explica el esquema de verificación para quien quiera entenderlo.
+    assert "Cómo verificamos" in resp.text
 
 
 def test_privacy_page_served() -> None:
