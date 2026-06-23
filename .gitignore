@@ -32,3 +32,8 @@ api_keys.env
 
 # Paquete de la extensión (artefacto de build)
 linterna-extension.zip
+
+# Firebase
+.firebase/
+firebase-debug.log
+firebase.exe

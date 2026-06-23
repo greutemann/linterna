@@ -1,0 +1,13 @@
+{
+  "hosting": {
+    "site": "linterna",
+    "public": "public",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [
+      {
+        "source": "**",
+        "run": { "serviceId": "linterna", "region": "southamerica-east1" }
+      }
+    ]
+  }
+}
