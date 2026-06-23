@@ -12,11 +12,12 @@ Guía para publicar Linterna como servicio público en Cloud Run, barato y segur
   La key de Gemini sigue viviendo en `linterna-500200` (free tier); Cloud Run solo paga
   el compute, que cae dentro del free tier (2M requests/mes ≈ US$0).
 
-## 0. Antes de empezar: rate limiting
+## 0. Rate limiting (ya incluido)
 
-Un `/api/verify` público gasta tus keys. Las defensas de presupuesto (SearchBudget,
-BudgetExceeded) acotan el gasto, pero conviene **agregar rate limiting por IP** antes de
-exponerlo. Ver la sección final.
+Un `/api/verify` público gasta tus keys. La app ya trae **rate limiting por IP**
+(default 30 req/min por IP; detecta la IP real vía `X-Forwarded-For`, que Cloud Run
+setea). Ajustable con los parámetros de `create_app`. Sumado a los topes de presupuesto
+(SearchBudget, BudgetExceeded) y a `--max-instances`, acota el abuso y el gasto.
 
 ## 1. Proyecto de hosting (con billing, aislado)
 
@@ -69,8 +70,8 @@ ese host a `host_permissions` en `extension/manifest.json`.
 - **Cero PII (invariante 6):** no se loguea texto identificable del usuario; no agregar
   logging que lo haga.
 
-## Rate limiting (pendiente recomendado)
+## Ajustar el rate limit
 
-Agregar `slowapi` (o equivalente) al `create_app` para limitar requests por IP a
-`/api/verify`. Es un cambio chico; pedilo y se implementa con su test antes de ir a
-producción.
+El límite por defecto (30 req/min por IP) se cambia en `build_default_pipeline` /
+`create_app` (`rate_limit`, `rate_window_s`). Para tráfico público real, considerá además
+un proxy (Cloudflare) adelante para filtrar abuso antes de que llegue a Cloud Run.

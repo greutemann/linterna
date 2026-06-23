@@ -7,15 +7,46 @@ LLM ya pasó por validación de citas aguas arriba (invariante 3) antes de llega
 
 from __future__ import annotations
 
+import time
+from collections import defaultdict
+from collections.abc import Callable
 from typing import Any, Protocol
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, field_validator
 
 from linterna.types import Verdict, VerificationResult
 
 from .page import INDEX_HTML
+
+
+class _RateLimiter:
+    """Limitador por clave (IP) con ventana deslizante. Protege las keys del abuso."""
+
+    def __init__(self, max_requests: int, window_s: float, clock: Callable[[], float]) -> None:
+        self._max = max_requests
+        self._window_s = window_s
+        self._clock = clock
+        self._hits: dict[str, list[float]] = defaultdict(list)
+
+    def allow(self, key: str) -> bool:
+        now = self._clock()
+        recent = [t for t in self._hits[key] if t > now - self._window_s]
+        if len(recent) >= self._max:
+            self._hits[key] = recent
+            return False
+        recent.append(now)
+        self._hits[key] = recent
+        return True
+
+
+def _client_ip(request: Request) -> str:
+    # Detrás de Cloud Run la IP real viene en X-Forwarded-For (primer salto).
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        return xff.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
 
 
 class _Pipeline(Protocol):
@@ -52,11 +83,20 @@ def _result_to_dict(result: VerificationResult) -> dict[str, Any]:
     }
 
 
-def create_app(pipeline: _Pipeline) -> FastAPI:
+def create_app(
+    pipeline: _Pipeline,
+    *,
+    rate_limit: int = 30,
+    rate_window_s: float = 60.0,
+    clock: Callable[[], float] = time.monotonic,
+) -> FastAPI:
     app = FastAPI(title="Linterna", description="Servicio público de verificación. No es un oráculo.")
+    limiter = _RateLimiter(rate_limit, rate_window_s, clock)
 
     @app.post("/api/verify")
-    def verify(payload: ClaimIn) -> dict[str, Any]:
+    def verify(payload: ClaimIn, request: Request) -> dict[str, Any]:
+        if not limiter.allow(_client_ip(request)):
+            raise HTTPException(status_code=429, detail="Demasiadas consultas. Probá en un momento.")
         return _result_to_dict(pipeline.verify(payload.claim))
 
     @app.get("/", response_class=HTMLResponse)
