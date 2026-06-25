@@ -26,14 +26,6 @@ from linterna.router import LLMClient, Message
 from linterna.types import Source, VerificationResult, Verdict, light_for
 from linterna.validation import FabricatedCitation, assert_all_recovered
 
-_STANCE_TO_VERDICT: dict[str, Verdict] = {
-    "supports": Verdict.EVIDENCE_SUPPORTS,
-    "refutes": Verdict.EVIDENCE_REFUTES,
-    "mixed": Verdict.EVIDENCE_MIXED,
-}
-
-_STRONG = {Verdict.EVIDENCE_SUPPORTS, Verdict.EVIDENCE_REFUTES}
-
 _SYSTEM_PROMPT = (
     "Sos un asistente de investigación. NO sos un oráculo: no declares si una afirmación es "
     "verdadera o falsa. Razoná ÚNICAMENTE sobre la evidencia provista (no uses conocimiento "
@@ -93,32 +85,31 @@ class InvestigatorAgent:
             "synthesis", messages, max_tokens=self._max_tokens, json_mode=True, temperature=0.0
         )
 
+        # Cautela asimétrica: desde evidencia web SOLO desmentimos (rojo); nunca afirmamos
+        # (verde) ni resumimos lo disputado. Afirmar de más una afirmación cargada es el
+        # daño que vimos. Cuando no corresponde desmentir, caemos a fuentes-guía neutrales.
         parsed = _parse_response(result.text)
         if parsed is None:
-            return _abstain("La respuesta del modelo no se pudo interpretar.")
+            return _leads(evidence)
 
         stance = str(parsed.get("stance", "")).strip().lower()
-        if stance == "insufficient" or stance not in _STANCE_TO_VERDICT:
-            return _abstain("La evidencia confiable no alcanza para un resumen claro.")
+        if stance != "refutes":
+            return _leads(evidence)
 
-        cited_ids = parsed.get("cited_source_ids") or []
-        sources = self._resolve_citations(cited_ids, evidence)
+        sources = self._resolve_citations(parsed.get("cited_source_ids") or [], evidence)
         if sources is None or not sources:
-            return _abstain("Las citas no se validaron contra la evidencia recuperada.")
+            return _leads(evidence)
+        # Solo desmentimos con al menos una fuente de alta confiabilidad.
+        if not any(tier_of(s.url) is Tier.HIGH for s in sources):
+            return _leads(evidence)
 
-        verdict = _STANCE_TO_VERDICT[stance]
-        # Un lean fuerte exige al menos una fuente de alta confiabilidad.
-        if verdict in _STRONG and not any(tier_of(s.url) is Tier.HIGH for s in sources):
-            verdict = Verdict.EVIDENCE_MIXED
-
-        support_pct = _clamp_pct(parsed.get("support_pct"))
         return VerificationResult(
-            verdict=verdict,
-            light=light_for(verdict),
+            verdict=Verdict.EVIDENCE_REFUTES,
+            light=light_for(Verdict.EVIDENCE_REFUTES),
             explanation=str(parsed.get("explanation", "")).strip(),
             sources=sources,
             kind="evidencia",
-            support_pct=support_pct,
+            support_pct=_clamp_pct(parsed.get("support_pct")),
         )
 
     def _build_messages(self, claim: str, evidence: list[Evidence]) -> list[Message]:

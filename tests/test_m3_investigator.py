@@ -83,17 +83,11 @@ def test_only_fringe_sources_are_discarded_and_abstains() -> None:
     assert llm.calls == 0  # ni se razona sobre fuentes descartadas
 
 
-# --- no sentencia (nunca TRUE/FALSE) -------------------------------------------
-
-def test_agent_never_returns_authoritative_verdict() -> None:
-    agent, _r, _llm = _agent([_HIGH], _json("supports", ["e1"], 80))
-    v = agent.investigate("algo").verdict
-    assert v not in {Verdict.TRUE, Verdict.FALSE, Verdict.MISLEADING}
-    assert v is Verdict.EVIDENCE_SUPPORTS
-
+# --- cautela asimétrica: desmiente (rojo), nunca afirma (verde) ----------------
 
 def test_reliable_sources_refuting_yields_evidence_refutes() -> None:
-    # El caso del incidente, BIEN resuelto: fuentes confiables contradicen -> rojo.
+    # Desmentir con fuentes confiables -> rojo. Acá vuelve la utilidad (ej. "todos los
+    # loros son verdes" -> falso con un contraejemplo confiable).
     agent, _r, _llm = _agent([_HIGH], _json("refutes", ["e1"], 8))
     result = agent.investigate("la afirmación X")
     assert result.verdict is Verdict.EVIDENCE_REFUTES
@@ -102,34 +96,40 @@ def test_reliable_sources_refuting_yields_evidence_refutes() -> None:
     assert result.kind == "evidencia"
 
 
-# --- un lean fuerte exige fuente de alta confiabilidad -------------------------
-
-def test_strong_support_without_high_trust_is_downgraded_to_mixed() -> None:
-    # El modelo dice "supports" pero solo cita una fuente desconocida -> dividida.
-    agent, _r, _llm = _agent([_UNKNOWN], _json("supports", ["e2"], 90))
-    assert agent.investigate("x").verdict is Verdict.EVIDENCE_MIXED
-
-
-def test_support_with_high_trust_stays_supported() -> None:
-    agent, _r, _llm = _agent([_HIGH], _json("supports", ["e1"], 85))
-    result = agent.investigate("x")
-    assert result.verdict is Verdict.EVIDENCE_SUPPORTS
-    assert result.support_pct == 85
+def test_supports_is_never_affirmed_falls_back_to_leads() -> None:
+    # Aunque el modelo diga "supports" con fuente confiable, NO se afirma (verde): se
+    # ofrecen fuentes-guía. Afirmar desde evidencia web es el riesgo (caso raza/IQ).
+    agent, _r, _llm = _agent([_HIGH], _json("supports", ["e1"], 95))
+    result = agent.investigate("una afirmación cargada")
+    assert result.verdict is Verdict.INSUFFICIENT  # sin luz verde
+    assert result.support_pct is None
+    assert len(result.sources) >= 1  # pero ofrece fuentes para investigar
 
 
-# --- validación de citas / parseo ----------------------------------------------
+def test_mixed_stance_falls_back_to_leads() -> None:
+    agent, _r, _llm = _agent([_HIGH], _json("mixed", ["e1"], 50))
+    assert agent.investigate("x").verdict is Verdict.INSUFFICIENT
 
-def test_fabricated_citation_abstains() -> None:
+
+def test_refute_without_high_trust_falls_back_to_leads() -> None:
+    # No desmentimos con fuentes no confiables: caemos a fuentes-guía (sin rojo).
+    agent, _r, _llm = _agent([_UNKNOWN], _json("refutes", ["e2"], 5))
+    assert agent.investigate("x").verdict is Verdict.INSUFFICIENT
+
+
+# --- validación de citas / parseo (caen a fuentes-guía, no inventan veredicto) -
+
+def test_fabricated_citation_falls_back_to_leads() -> None:
     agent, _r, _llm = _agent([_HIGH], _json("refutes", ["e99"], 5))
     assert agent.investigate("x").verdict is Verdict.INSUFFICIENT
 
 
-def test_unparseable_response_abstains() -> None:
+def test_unparseable_response_falls_back_to_leads() -> None:
     agent, _r, _llm = _agent([_HIGH], "no puedo responder")
     assert agent.investigate("x").verdict is Verdict.INSUFFICIENT
 
 
-def test_insufficient_stance_abstains() -> None:
+def test_insufficient_stance_falls_back_to_leads() -> None:
     agent, _r, _llm = _agent([_HIGH], _json("insufficient", []))
     assert agent.investigate("x").verdict is Verdict.INSUFFICIENT
 

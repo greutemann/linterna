@@ -48,7 +48,9 @@ def build_default_pipeline() -> LinternaPipeline:
         ttl_s=600,
     )
     router = RouterClient(RouterConfig.from_yaml(_router_config_path()))
-    agent = InvestigatorAgent(retriever=retriever, llm=router)
+    # Cautela asimétrica: el agente puede DESMENTIR (rojo) con fuentes confiables, pero
+    # nunca AFIRMA (verde) desde evidencia web; lo no-desmentible cae a fuentes-guía.
+    agent = InvestigatorAgent(retriever=retriever, llm=router, synthesize=True)
     return LinternaPipeline(archive=archive, investigator=agent)
 
 
