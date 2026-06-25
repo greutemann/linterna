@@ -1,5 +1,5 @@
 // Guarda/lee el endpoint de la API en chrome.storage.sync.
-const DEFAULT_ENDPOINT = "http://127.0.0.1:8000";
+const DEFAULT_ENDPOINT = "https://linterna-498857011078.southamerica-east1.run.app";
 const input = document.getElementById("endpoint");
 const saved = document.getElementById("saved");
 

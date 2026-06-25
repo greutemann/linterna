@@ -4,7 +4,7 @@
 // con chrome.scripting SOLO en la pestaña donde el usuario activa el gesto, gracias a
 // activeTab. Mínimo acceso posible (coherente con la privacidad de Linterna).
 
-const DEFAULT_ENDPOINT = "http://127.0.0.1:8000";
+const DEFAULT_ENDPOINT = "https://linterna-498857011078.southamerica-east1.run.app";
 const MENU_ID = "linterna-verify";
 
 chrome.runtime.onInstalled.addListener(() => {
