@@ -68,7 +68,10 @@ class ClaimIn(BaseModel):
 def _result_to_dict(result: VerificationResult) -> dict[str, Any]:
     return {
         "verdict": result.verdict.value,
+        "label": result.label,
         "light": result.light.value,
+        "kind": result.kind,
+        "support_pct": result.support_pct,
         "explanation": result.explanation,
         "is_abstention": result.verdict is Verdict.INSUFFICIENT,
         "sources": [

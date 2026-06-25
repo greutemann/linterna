@@ -77,7 +77,9 @@ function showPanel(msg) {
         .src a{color:#2563eb;text-decoration:none;font-weight:600;} .pub{color:#6b7280;font-size:.82rem;}
         .dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:7px;vertical-align:middle;}
         .verde{background:#16a34a;}.amarillo{background:#d97706;}.rojo{background:#dc2626;}.gris{background:#9ca3af;}
-        .verdict{font-weight:700;text-transform:capitalize;}
+        .verdict{font-weight:700;}
+        .bar{height:10px;border-radius:6px;background:#eee;overflow:hidden;margin:10px 0 4px;}
+        .fill{height:100%;border-radius:6px;}
         .note{color:#6b7280;font-size:.85rem;margin-top:8px;} .muted{color:#6b7280;}
         button.ghost{margin-top:10px;padding:8px 12px;border:1px solid #2563eb;background:none;color:#2563eb;
           border-radius:8px;cursor:pointer;}
@@ -130,9 +132,14 @@ function showPanel(msg) {
 
   root.getElementById("reveal").addEventListener("click", (e) => {
     e.target.style.display = "none";
+    const bar = (d.support_pct != null)
+      ? `<div class="bar"><div class="fill ${esc(d.light)}" style="width:${d.support_pct}%"></div></div>
+         <p class="muted">≈${d.support_pct}% de la evidencia confiable respalda la afirmación</p>`
+      : "";
     root.getElementById("v").innerHTML = `<div class="card">
-      <p><span class="dot ${esc(d.light)}"></span><span class="verdict">${esc(d.verdict)}</span></p>
+      <p><span class="dot ${esc(d.light)}"></span><span class="verdict">${esc(d.label)}</span></p>
+      ${bar}
       <p>${esc(d.explanation)}</p>
-      <p class="note">Esto es lo que concluyen las fuentes citadas. La decisión final es tuya.</p></div>`;
+      <p class="note">Esto es lo que dicen las fuentes${d.kind === "archivo" ? " que ya verificaron esto" : " confiables"}. La conclusión es tuya.</p></div>`;
   });
 }

@@ -1,9 +1,17 @@
-"""Agente investigador (M3): RAG sobre evidencia fresca con validación estricta.
+"""Agente investigador (M3): aporta evidencia de fuentes confiables, sin sentenciar.
 
-Orquesta: recuperar evidencia → pedirle al LLM que razone SOLO sobre ella → parsear su
-salida estructurada → validar que cada cita apunte a evidencia recuperada → emitir
-veredicto o abstenerse. El modelo nunca aporta hechos propios (invariante 2); el código
-—no el modelo— decide si las citas son legítimas (invariante 3).
+Tras el incidente de afirmaciones dañinas estampadas como "verdadero", el agente NO emite
+veredictos de verdad. Su trabajo es:
+  1. recuperar evidencia y descartar fuentes marginales/desinformantes (reliability),
+  2. dejar que el modelo razone SOLO sobre la evidencia confiable (invariante 2),
+     con temperatura 0 para fidelidad,
+  3. resumir qué dicen las fuentes y con qué fuerza (lean + % de apoyo), sin tomar partido,
+  4. validar que cada cita sea real y recuperada (invariante 3),
+  5. abstenerse si no hay evidencia confiable (invariante 4).
+
+Un "respaldado/contradicho" fuerte exige al menos una fuente de alta confiabilidad; si solo
+hay fuentes desconocidas, se degrada a "dividida". Así no se presenta un blog marginal como
+si fuera evidencia sólida.
 """
 
 from __future__ import annotations
@@ -13,30 +21,34 @@ import re
 from typing import Any
 
 from linterna.evidence import Evidence, EvidenceRetriever
+from linterna.evidence.reliability import Tier, tier_of
 from linterna.router import LLMClient, Message
 from linterna.types import Source, VerificationResult, Verdict, light_for
 from linterna.validation import FabricatedCitation, assert_all_recovered
 
-# Etiquetas de veredicto que el agente acepta del modelo. Cualquier otra → abstención.
-_VERDICT_LABELS: dict[str, Verdict] = {
-    "verdadero": Verdict.TRUE,
-    "falso": Verdict.FALSE,
-    "enganoso": Verdict.MISLEADING,
-    "engañoso": Verdict.MISLEADING,
-    "disputado": Verdict.DISPUTED,
+_STANCE_TO_VERDICT: dict[str, Verdict] = {
+    "supports": Verdict.EVIDENCE_SUPPORTS,
+    "refutes": Verdict.EVIDENCE_REFUTES,
+    "mixed": Verdict.EVIDENCE_MIXED,
 }
 
+_STRONG = {Verdict.EVIDENCE_SUPPORTS, Verdict.EVIDENCE_REFUTES}
+
 _SYSTEM_PROMPT = (
-    "Sos un asistente de verificación. Razoná ÚNICAMENTE sobre la evidencia provista "
-    "abajo; no uses conocimiento propio ni inventes datos. Si la evidencia no alcanza, "
-    "decílo. Respondé SOLO con un JSON: "
-    '{"verdict": "verdadero|falso|enganoso|disputado", "explanation": "...", '
-    '"cited_source_ids": ["id", ...]}. Citá solo ids de la evidencia provista.'
+    "Sos un asistente de investigación. NO sos un oráculo: no declares si una afirmación es "
+    "verdadera o falsa. Razoná ÚNICAMENTE sobre la evidencia provista (no uses conocimiento "
+    "propio ni inventes datos) y resumí qué dicen las fuentes, ponderando su confiabilidad: "
+    "las de confiabilidad 'alta' pesan; las 'desconocida' son contexto, no prueba. "
+    "Si la evidencia confiable es escasa o contradictoria, decílo. "
+    'Respondé SOLO con un JSON: {"stance": "supports|refutes|mixed|insufficient", '
+    '"support_pct": <0-100, % de la evidencia confiable que respalda la afirmación>, '
+    '"explanation": "<resumen breve y fiel, sin tomar partido>", '
+    '"cited_source_ids": ["<id>", ...]}. Citá solo ids de la evidencia provista.'
 )
 
 
 class InvestigatorAgent:
-    """Recupera evidencia y razona sobre ella con validación estricta de citas."""
+    """Recupera evidencia confiable y describe su lean, sin emitir veredictos de verdad."""
 
     def __init__(self, *, retriever: EvidenceRetriever, llm: LLMClient, max_tokens: int = 800) -> None:
         self._retriever = retriever
@@ -44,43 +56,51 @@ class InvestigatorAgent:
         self._max_tokens = max_tokens
 
     def investigate(self, claim: str) -> VerificationResult:
-        evidence = self._retriever.retrieve(claim)
+        # Descarta fuentes marginales/desinformantes antes de razonar.
+        evidence = [e for e in self._retriever.retrieve(claim) if tier_of(e.url) is not Tier.DENY]
         if not evidence:
-            return _abstain("No se recuperó evidencia para esta afirmación.")
+            return _abstain("No se recuperó evidencia de fuentes confiables.")
 
         messages = self._build_messages(claim, evidence)
-        # json_mode: pedimos salida estructurada para que la respuesta sea parseable de
-        # forma confiable. La validación de citas (invariante 3) sigue determinística.
         result = self._llm.complete(
-            "synthesis", messages, max_tokens=self._max_tokens, json_mode=True
+            "synthesis", messages, max_tokens=self._max_tokens, json_mode=True, temperature=0.0
         )
 
         parsed = _parse_response(result.text)
         if parsed is None:
             return _abstain("La respuesta del modelo no se pudo interpretar.")
 
-        verdict = _VERDICT_LABELS.get(_normalize(parsed.get("verdict", "")))
-        if verdict is None:
-            return _abstain("El modelo no entregó un veredicto reconocible.")
+        stance = str(parsed.get("stance", "")).strip().lower()
+        if stance == "insufficient" or stance not in _STANCE_TO_VERDICT:
+            return _abstain("La evidencia confiable no alcanza para un resumen claro.")
 
         cited_ids = parsed.get("cited_source_ids") or []
         sources = self._resolve_citations(cited_ids, evidence)
         if sources is None or not sources:
-            # Cita inventada o ausencia de citas: sin evidencia validada, no hay veredicto.
-            return _abstain("Las citas del modelo no se validaron contra la evidencia.")
+            return _abstain("Las citas no se validaron contra la evidencia recuperada.")
 
+        verdict = _STANCE_TO_VERDICT[stance]
+        # Un lean fuerte exige al menos una fuente de alta confiabilidad.
+        if verdict in _STRONG and not any(tier_of(s.url) is Tier.HIGH for s in sources):
+            verdict = Verdict.EVIDENCE_MIXED
+
+        support_pct = _clamp_pct(parsed.get("support_pct"))
         return VerificationResult(
             verdict=verdict,
             light=light_for(verdict),
             explanation=str(parsed.get("explanation", "")).strip(),
             sources=sources,
+            kind="evidencia",
+            support_pct=support_pct,
         )
 
     def _build_messages(self, claim: str, evidence: list[Evidence]) -> list[Message]:
         bloques = "\n\n".join(
-            f"[{e.id}] {e.publisher} — {e.title}\n{e.snippet}\n({e.url})" for e in evidence
+            f"[{e.id}] (confiabilidad: {tier_of(e.url).value}) {e.publisher} — {e.title}\n"
+            f"{e.snippet}\n({e.url})"
+            for e in evidence
         )
-        user = f"Afirmación a verificar:\n{claim}\n\nEvidencia recuperada:\n{bloques}"
+        user = f"Afirmación a investigar:\n{claim}\n\nEvidencia recuperada:\n{bloques}"
         return [Message(role="system", content=_SYSTEM_PROMPT), Message(role="user", content=user)]
 
     @staticmethod
@@ -90,22 +110,23 @@ class InvestigatorAgent:
         by_id = {e.id: e for e in evidence}
         retrieved = tuple(e.as_source() for e in evidence)
         try:
-            # Un id no recuperado lanza KeyError -> lo tratamos como cita inventada.
             cited = tuple(by_id[str(cid)].as_source() for cid in cited_ids)
         except KeyError:
-            return None
+            return None  # citó un id no recuperado -> cita inventada
         try:
             return assert_all_recovered(cited, retrieved)
         except FabricatedCitation:
             return None
 
 
-def _normalize(text: str) -> str:
-    return text.strip().lower()
+def _clamp_pct(value: Any) -> int | None:
+    try:
+        return max(0, min(100, int(value)))
+    except (TypeError, ValueError):
+        return None
 
 
 def _parse_response(text: str) -> dict[str, Any] | None:
-    """Extrae el objeto JSON de la salida del modelo (tolera ```fences``` y texto extra)."""
     cleaned = re.sub(r"^```(?:json)?|```$", "", text.strip(), flags=re.MULTILINE).strip()
     start, end = cleaned.find("{"), cleaned.rfind("}")
     if start == -1 or end == -1 or end < start:
@@ -121,6 +142,7 @@ def _abstain(reason: str) -> VerificationResult:
     return VerificationResult(
         verdict=Verdict.INSUFFICIENT,
         light=light_for(Verdict.INSUFFICIENT),
-        explanation=f"{reason} Sin evidencia validada no se emite veredicto.",
+        explanation=f"{reason} Sin evidencia confiable validada no se emite resumen.",
         sources=(),
+        kind="evidencia",
     )

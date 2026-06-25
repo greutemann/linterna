@@ -1,16 +1,16 @@
-"""M3 — agente investigador. Tests primero (7 criterios de docs/milestone-3-agent.md).
+"""M3 — agente investigador (rediseño). El agente APORTA evidencia, no sentencia.
 
-Retriever y LLM mockeados: deterministas, sin red ni keys. El LLM falso devuelve un
-LLMResult con el texto que cada test controla (simulando la salida estructurada).
+Cubre: descarte de fuentes marginales, no emitir TRUE/FALSE, lean por confiabilidad
+(respaldado fuerte exige fuente de alta confianza), validación de citas y abstención.
+Incluye la reproducción del incidente (afirmación dañina con fuentes fringe).
 """
 
 from __future__ import annotations
 
-
 from linterna.evidence import Evidence
 from linterna.evidence.investigator import InvestigatorAgent
 from linterna.router import LLMResult, Message
-from linterna.types import Verdict
+from linterna.types import Light, Verdict
 
 
 class FakeRetriever:
@@ -24,125 +24,127 @@ class FakeRetriever:
 
 
 class FakeLLM:
-    """LLMClient falso: devuelve un texto fijo y registra el prompt recibido."""
-
     def __init__(self, text: str) -> None:
         self._text = text
         self.last_messages: list[Message] | None = None
         self.calls = 0
+        self.json_mode: bool | None = None
+        self.temperature: float | None = None
 
     def complete(
-        self, task: str, messages: list[Message], *, max_tokens: int, json_mode: bool = False
+        self,
+        task: str,
+        messages: list[Message],
+        *,
+        max_tokens: int,
+        json_mode: bool = False,
+        temperature: float | None = None,
     ) -> LLMResult:
         self.calls += 1
         self.last_messages = messages
-        return LLMResult(
-            text=self._text, effective_model="fake", tokens=10, estimated_cost_usd=0.0
-        )
+        self.json_mode = json_mode
+        self.temperature = temperature
+        return LLMResult(text=self._text, effective_model="fake", tokens=10, estimated_cost_usd=0.0)
 
 
-_EVIDENCE = [
-    Evidence(
-        id="e1",
-        url="https://oms.org/dengue",
-        title="Brote de dengue 2026",
-        publisher="OMS",
-        snippet="Los casos de dengue aumentaron un 30% respecto al año anterior.",
-    ),
-    Evidence(
-        id="e2",
-        url="https://min-salud.gob/dengue",
-        title="Parte epidemiológico",
-        publisher="Ministerio de Salud",
-        snippet="Se confirmaron focos en tres provincias.",
-    ),
-]
+def _ev(id_: str, url: str) -> Evidence:
+    return Evidence(id=id_, url=url, title="t", publisher="P", snippet="s")
+
+
+_HIGH = _ev("e1", "https://www.who.int/dengue")        # alta confiabilidad
+_UNKNOWN = _ev("e2", "https://un-blog-cualquiera.com")  # desconocida
+_DENY = _ev("e3", "https://www.infowars.com/x")         # descartada
 
 
 def _agent(evidence: list[Evidence], llm_text: str) -> tuple[InvestigatorAgent, FakeRetriever, FakeLLM]:
-    retriever = FakeRetriever(evidence)
-    llm = FakeLLM(llm_text)
-    return InvestigatorAgent(retriever=retriever, llm=llm), retriever, llm
+    r, llm = FakeRetriever(evidence), FakeLLM(llm_text)
+    return InvestigatorAgent(retriever=r, llm=llm), r, llm
 
 
-# --- Criterio 1: sin evidencia → abstención -----------------------------------
+def _json(stance: str, ids: list[str], pct: int = 50) -> str:
+    import json
+    return json.dumps({"stance": stance, "support_pct": pct, "explanation": "resumen", "cited_source_ids": ids})
+
+
+# --- abstención -----------------------------------------------------------------
 
 def test_no_evidence_abstains_without_calling_llm() -> None:
-    agent, _retriever, llm = _agent([], "{}")
-    result = agent.investigate("afirmación sin evidencia")
-
-    assert result.verdict is Verdict.INSUFFICIENT
-    assert result.sources == ()
-    assert llm.calls == 0  # ni se molesta en llamar al modelo
+    agent, _r, llm = _agent([], "{}")
+    assert agent.investigate("x").verdict is Verdict.INSUFFICIENT
+    assert llm.calls == 0
 
 
-# --- Criterio 2: evidencia + cita válida → veredicto --------------------------
-
-def test_valid_citation_yields_verdict_with_sources() -> None:
-    text = '{"verdict": "verdadero", "explanation": "La OMS lo confirma.", "cited_source_ids": ["e1"]}'
-    agent, _r, _llm = _agent(_EVIDENCE, text)
-
-    result = agent.investigate("El dengue aumentó en 2026")
-
-    assert result.verdict is Verdict.TRUE
-    assert len(result.sources) == 1
-    assert result.sources[0].url == "https://oms.org/dengue"
-    assert result.sources[0].publisher == "OMS"
+def test_only_fringe_sources_are_discarded_and_abstains() -> None:
+    # INCIDENTE: afirmación dañina cuya "evidencia" son solo fuentes fringe.
+    agent, _r, llm = _agent([_DENY], _json("supports", ["e3"], 95))
+    result = agent.investigate("afirmación pseudocientífica dañina")
+    assert result.verdict is Verdict.INSUFFICIENT  # nunca "verdadero"
+    assert llm.calls == 0  # ni se razona sobre fuentes descartadas
 
 
-# --- Criterio 3: cita inventada → rechazada → abstención ----------------------
+# --- no sentencia (nunca TRUE/FALSE) -------------------------------------------
 
-def test_fabricated_citation_is_rejected_and_abstains() -> None:
-    # El modelo cita "e99", que no fue recuperado.
-    text = '{"verdict": "falso", "explanation": "x", "cited_source_ids": ["e99"]}'
-    agent, _r, _llm = _agent(_EVIDENCE, text)
-
-    result = agent.investigate("algo")
-
-    assert result.verdict is Verdict.INSUFFICIENT
-    assert result.sources == ()
+def test_agent_never_returns_authoritative_verdict() -> None:
+    agent, _r, _llm = _agent([_HIGH], _json("supports", ["e1"], 80))
+    v = agent.investigate("algo").verdict
+    assert v not in {Verdict.TRUE, Verdict.FALSE, Verdict.MISLEADING}
+    assert v is Verdict.EVIDENCE_SUPPORTS
 
 
-def test_no_citations_abstains() -> None:
-    text = '{"verdict": "falso", "explanation": "x", "cited_source_ids": []}'
-    agent, _r, _llm = _agent(_EVIDENCE, text)
-    assert agent.investigate("algo").verdict is Verdict.INSUFFICIENT
+def test_reliable_sources_refuting_yields_evidence_refutes() -> None:
+    # El caso del incidente, BIEN resuelto: fuentes confiables contradicen -> rojo.
+    agent, _r, _llm = _agent([_HIGH], _json("refutes", ["e1"], 8))
+    result = agent.investigate("la afirmación X")
+    assert result.verdict is Verdict.EVIDENCE_REFUTES
+    assert result.light is Light.RED
+    assert result.support_pct == 8
+    assert result.kind == "evidencia"
 
 
-# --- Criterio 4: el modelo solo razona sobre evidencia recuperada -------------
+# --- un lean fuerte exige fuente de alta confiabilidad -------------------------
 
-def test_prompt_contains_evidence_and_constraint() -> None:
-    text = '{"verdict": "verdadero", "explanation": "x", "cited_source_ids": ["e1"]}'
-    agent, _r, llm = _agent(_EVIDENCE, text)
-
-    agent.investigate("El dengue aumentó")
-
-    assert llm.last_messages is not None
-    prompt = "\n".join(m.content for m in llm.last_messages)
-    # La evidencia recuperada está en el prompt...
-    assert "e1" in prompt and "dengue aumentaron un 30%" in prompt
-    # ...y se le prohíbe usar conocimiento propio (invariante 2).
-    assert "solo" in prompt.lower() and "evidencia" in prompt.lower()
+def test_strong_support_without_high_trust_is_downgraded_to_mixed() -> None:
+    # El modelo dice "supports" pero solo cita una fuente desconocida -> dividida.
+    agent, _r, _llm = _agent([_UNKNOWN], _json("supports", ["e2"], 90))
+    assert agent.investigate("x").verdict is Verdict.EVIDENCE_MIXED
 
 
-# --- Criterio 5: respuesta no parseable → abstención --------------------------
+def test_support_with_high_trust_stays_supported() -> None:
+    agent, _r, _llm = _agent([_HIGH], _json("supports", ["e1"], 85))
+    result = agent.investigate("x")
+    assert result.verdict is Verdict.EVIDENCE_SUPPORTS
+    assert result.support_pct == 85
+
+
+# --- validación de citas / parseo ----------------------------------------------
+
+def test_fabricated_citation_abstains() -> None:
+    agent, _r, _llm = _agent([_HIGH], _json("refutes", ["e99"], 5))
+    assert agent.investigate("x").verdict is Verdict.INSUFFICIENT
+
 
 def test_unparseable_response_abstains() -> None:
-    agent, _r, _llm = _agent(_EVIDENCE, "lo siento, no puedo responder eso")
-    assert agent.investigate("algo").verdict is Verdict.INSUFFICIENT
+    agent, _r, _llm = _agent([_HIGH], "no puedo responder")
+    assert agent.investigate("x").verdict is Verdict.INSUFFICIENT
 
 
-# --- Criterio 6: veredicto desconocido → abstención ---------------------------
-
-def test_unknown_verdict_label_abstains() -> None:
-    text = '{"verdict": "quizas", "explanation": "x", "cited_source_ids": ["e1"]}'
-    agent, _r, _llm = _agent(_EVIDENCE, text)
-    assert agent.investigate("algo").verdict is Verdict.INSUFFICIENT
+def test_insufficient_stance_abstains() -> None:
+    agent, _r, _llm = _agent([_HIGH], _json("insufficient", []))
+    assert agent.investigate("x").verdict is Verdict.INSUFFICIENT
 
 
-def test_json_wrapped_in_fences_is_parsed() -> None:
-    text = '```json\n{"verdict": "falso", "explanation": "x", "cited_source_ids": ["e2"]}\n```'
-    agent, _r, _llm = _agent(_EVIDENCE, text)
-    result = agent.investigate("algo")
-    assert result.verdict is Verdict.FALSE
-    assert result.sources[0].publisher == "Ministerio de Salud"
+# --- prompt y parámetros --------------------------------------------------------
+
+def test_prompt_weighs_reliability_and_forbids_sentencing() -> None:
+    agent, _r, llm = _agent([_HIGH], _json("supports", ["e1"], 70))
+    agent.investigate("x")
+    prompt = "\n".join(m.content for m in llm.last_messages or [])
+    assert "confiabilidad" in prompt.lower()
+    assert "no declares" in prompt.lower() or "no sos un oráculo" in prompt.lower()
+
+
+def test_agent_uses_json_mode_and_zero_temperature() -> None:
+    agent, _r, llm = _agent([_HIGH], _json("supports", ["e1"], 70))
+    agent.investigate("x")
+    assert llm.json_mode is True
+    assert llm.temperature == 0.0

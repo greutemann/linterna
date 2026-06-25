@@ -10,6 +10,22 @@ Resolver afirmaciones que **no** tienen verificación humana previa, sin que el 
 aporte hechos de su entrenamiento: recupera evidencia, razona sobre ella, y cada cita se
 valida contra lo efectivamente recuperado. Si nada valida, se abstiene.
 
+## Rediseño (tras incidente): el agente NO sentencia
+
+Una afirmación dañina/contestada llegó a estamparse como "verdadero" usando fuentes
+marginales. Corrección de principios:
+
+- **El agente nunca emite veredictos de verdad (TRUE/FALSE).** Eso queda solo para el
+  archivo (M1), donde un humano verificó. El agente describe el **estado de la evidencia**:
+  `EVIDENCE_SUPPORTS` / `EVIDENCE_REFUTES` / `EVIDENCE_MIXED`, con un **% de apoyo** y color.
+  Es "lo que dicen las fuentes", no un fallo de Linterna.
+- **Curaduría de fuentes** (`reliability.py`): se descartan dominios fringe/desinformantes;
+  un lean fuerte (respaldado/contradicho) exige al menos una fuente de **alta confiabilidad**,
+  si no se degrada a "dividida". Mostrar un blog marginal como evidencia ya es un daño.
+- **`temperature = 0`** en la síntesis: fidelidad a la evidencia, menos azar.
+- Si no hay evidencia confiable → abstención. El objetivo no es abstenerse siempre, es
+  **aportar** evidencia fiel sin tomar partido (invariantes 4 y 5).
+
 ## Frontera determinística (lo no negociable)
 
 - El modelo razona **solo** sobre la evidencia recuperada (invariante 2). El prompt no le

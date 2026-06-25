@@ -102,7 +102,11 @@ INDEX_HTML = """<!doctype html>
          vertical-align:middle; }
   .verde{background:#16a34a;} .amarillo{background:#d97706;} .rojo{background:#dc2626;}
   .gris{background:#9ca3af;}
-  .verdict { font-size:1.3rem; font-weight:700; text-transform:capitalize; }
+  .verdict { font-size:1.2rem; font-weight:700; }
+  .bar { height:10px; border-radius:6px; background:#eee; overflow:hidden; margin:10px 0 4px; }
+  .fill { height:100%; border-radius:6px; }
+  .fill.verde{background:#16a34a;} .fill.amarillo{background:#d97706;}
+  .fill.rojo{background:#dc2626;} .fill.gris{background:#9ca3af;}
   .note { color:var(--muted); font-size:.9rem; margin-top:10px; }
   .muted { color:var(--muted); }
   .how { margin-top:40px; border:1px solid var(--line); border-radius:12px; padding:6px 18px;
@@ -206,10 +210,15 @@ function render(d, claim) {
 
   document.getElementById('reveal').addEventListener('click', (e) => {
     e.target.style.display = 'none';
+    const bar = (d.support_pct != null)
+      ? `<div class="bar"><div class="fill ${escapeHtml(d.light)}" style="width:${d.support_pct}%"></div></div>
+         <p class="muted">≈${d.support_pct}% de la evidencia confiable respalda la afirmación</p>`
+      : '';
     document.getElementById('v').innerHTML = `<div class="card">
-      <p><span class="dot ${escapeHtml(d.light)}"></span><span class="verdict">${escapeHtml(d.verdict)}</span></p>
+      <p><span class="dot ${escapeHtml(d.light)}"></span><span class="verdict">${escapeHtml(d.label)}</span></p>
+      ${bar}
       <p>${escapeHtml(d.explanation)}</p>
-      <p class="note">Esto es lo que concluyen las fuentes citadas. La decisión final es tuya.</p>
+      <p class="note">Esto es lo que dicen las fuentes${d.kind === 'archivo' ? ' que ya verificaron esto' : ' confiables'}. La conclusión es tuya.</p>
     </div>`;
   });
 }

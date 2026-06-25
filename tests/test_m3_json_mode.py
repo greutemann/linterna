@@ -59,6 +59,19 @@ def test_router_forwards_json_mode_to_provider(tmp_path: Path) -> None:
     assert captured.get("response_format") == {"type": "json_object"}
 
 
+def test_router_forwards_temperature(tmp_path: Path) -> None:
+    captured: dict[str, Any] = {}
+
+    def completion(*, model: str, **kwargs: Any) -> Any:
+        captured.update(kwargs)
+        return _ok(model)
+
+    client = RouterClient(_cfg(tmp_path), completion_fn=completion, cost_fn=lambda _r: 0.0)
+    client.complete("synthesis", [Message(role="user", content="hola")], max_tokens=50, temperature=0.0)
+
+    assert captured.get("temperature") == 0.0
+
+
 def test_router_omits_json_mode_by_default(tmp_path: Path) -> None:
     captured: dict[str, Any] = {}
 
@@ -76,10 +89,18 @@ class RecordingLLM:
     def __init__(self) -> None:
         self.json_mode_seen: bool | None = None
 
-    def complete(self, task: str, messages: list[Message], *, max_tokens: int, json_mode: bool = False) -> LLMResult:
+    def complete(
+        self,
+        task: str,
+        messages: list[Message],
+        *,
+        max_tokens: int,
+        json_mode: bool = False,
+        temperature: float | None = None,
+    ) -> LLMResult:
         self.json_mode_seen = json_mode
         return LLMResult(
-            text='{"verdict":"falso","explanation":"x","cited_source_ids":["e1"]}',
+            text='{"stance":"refutes","support_pct":10,"explanation":"x","cited_source_ids":["e1"]}',
             effective_model="fake", tokens=5, estimated_cost_usd=0.0,
         )
 
