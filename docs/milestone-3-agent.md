@@ -26,6 +26,25 @@ marginales. Corrección de principios:
 - Si no hay evidencia confiable → abstención. El objetivo no es abstenerse siempre, es
   **aportar** evidencia fiel sin tomar partido (invariantes 4 y 5).
 
+## Default seguro (tras pruebas reales)
+
+Las pruebas reales mostraron que, incluso sin sentenciar, el modelo puede **confirmar de
+más** una afirmación cargada: ante "personas negras tienen menor CI", leyó la brecha de
+puntajes de tests en fuentes serias y la presentó como "respaldada" (verde 100%), aplastando
+el matiz (las fuentes la atribuyen a factores ambientales, no raciales). La fidelidad del
+resumen sobre afirmaciones cargadas **no es garantizable** con la tecnología actual.
+
+Por eso el agente arranca en **modo seguro (`synthesize=False`, default)**: ante un miss de
+archivo, **no pide veredicto ni síntesis al modelo**; ofrece **fuentes confiables como puntos
+de partida** ("no hay verificación humana; estas fuentes pueden ayudarte a investigar").
+Aporta sin endosar ni sentenciar. El veredicto firme (verde/rojo) viene **solo del archivo**
+(M1), donde un humano verificó.
+
+La síntesis con lean + % (`synthesize=True`) queda en el código, testeada, pero **no se
+expone** hasta resolver de forma robusta la confirmación-de-más en afirmaciones cargadas
+(opciones a evaluar: detección de temas sensibles, exigir matiz/contexto en el resumen,
+solo-debunk, o human-in-the-loop).
+
 ## Frontera determinística (lo no negociable)
 
 - El modelo razona **solo** sobre la evidencia recuperada (invariante 2). El prompt no le

@@ -41,14 +41,15 @@ class ArchiveProvider:
 
 
 def test_archive_hit_does_not_call_agent() -> None:
+    claim = "una afirmación ya verificada por humanos"
     source = Source(url="https://chequeado/x", title="t", publisher="Chequeado", reviewed_at=None)
     verifier = ArchiveVerifier(
-        provider=ArchiveProvider([RawReview("c", "Falso", source)]), cache=InMemoryCache()
+        provider=ArchiveProvider([RawReview(claim, "Falso", source)]), cache=InMemoryCache()
     )
     agent = StubInvestigator(_AGENT_RESULT)
     pipeline = LinternaPipeline(archive=verifier, investigator=agent)
 
-    result = pipeline.verify("una afirmación ya verificada")
+    result = pipeline.verify(claim)
 
     assert result.verdict is Verdict.FALSE  # vino del archivo
     assert agent.calls == 0  # el agente no se invocó

@@ -113,7 +113,7 @@ def test_agent_requests_json_mode() -> None:
         def retrieve(self, claim: str) -> list[Evidence]:
             return evidence
 
-    agent = InvestigatorAgent(retriever=R(), llm=llm)
+    agent = InvestigatorAgent(retriever=R(), llm=llm, synthesize=True)
     agent.investigate("algo")
 
     assert llm.json_mode_seen is True  # el agente pide JSON estructurado

@@ -57,8 +57,9 @@ _DENY = _ev("e3", "https://www.infowars.com/x")         # descartada
 
 
 def _agent(evidence: list[Evidence], llm_text: str) -> tuple[InvestigatorAgent, FakeRetriever, FakeLLM]:
+    # synthesize=True para ejercitar el motor de síntesis (lean + %).
     r, llm = FakeRetriever(evidence), FakeLLM(llm_text)
-    return InvestigatorAgent(retriever=r, llm=llm), r, llm
+    return InvestigatorAgent(retriever=r, llm=llm, synthesize=True), r, llm
 
 
 def _json(stance: str, ids: list[str], pct: int = 50) -> str:
@@ -148,3 +149,28 @@ def test_agent_uses_json_mode_and_zero_temperature() -> None:
     agent.investigate("x")
     assert llm.json_mode is True
     assert llm.temperature == 0.0
+
+
+# --- modo seguro por defecto (synthesize=False): fuentes como leads, sin veredicto ------
+
+def test_safe_mode_offers_sources_without_model_verdict() -> None:
+    r, llm = FakeRetriever([_HIGH, _UNKNOWN]), FakeLLM(_json("supports", ["e1"], 99))
+    agent = InvestigatorAgent(retriever=r, llm=llm)  # synthesize=False por defecto
+
+    result = agent.investigate("una afirmación cualquiera")
+
+    assert llm.calls == 0  # NO se le pide veredicto/síntesis al modelo
+    assert result.verdict is Verdict.INSUFFICIENT  # sin luz verde/roja
+    assert result.support_pct is None
+    assert len(result.sources) == 2  # ofrece las fuentes como puntos de partida
+
+
+def test_safe_mode_drops_fringe_and_prioritizes_high_trust() -> None:
+    r, llm = FakeRetriever([_UNKNOWN, _DENY, _HIGH]), FakeLLM("{}")
+    agent = InvestigatorAgent(retriever=r, llm=llm)
+
+    result = agent.investigate("x")
+
+    urls = [s.url for s in result.sources]
+    assert "https://www.infowars.com/x" not in urls  # fringe descartada
+    assert urls[0] == "https://www.who.int/dengue"   # alta confiabilidad primero

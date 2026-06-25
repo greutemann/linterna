@@ -48,6 +48,28 @@ def test_archive_hit_returns_verdict_and_sources() -> None:
     assert _SOURCE in result.sources
 
 
+def test_unrelated_claimreview_does_not_apply_its_verdict() -> None:
+    # El archivo devolvió una verificación de OTRA afirmación (proximidad de búsqueda).
+    # No debe aplicarse su veredicto -> abstención (cae al agente en el pipeline).
+    claim = "La Tierra gira alrededor del Sol"
+    otra = RawReview(
+        "La Tierra está en su punto más alejado del Sol y por eso hace más frío",
+        "Falso",
+        Source(url="https://x/y", title="Falso: clima y distancia al Sol", publisher="Univision"),
+    )
+    verifier = ArchiveVerifier(provider=FakeProvider({claim: [otra]}), cache=InMemoryCache())
+    assert verifier.verify(claim).verdict is Verdict.INSUFFICIENT
+
+
+def test_bulo_rating_maps_to_false() -> None:
+    claim = "El agua con limón en ayunas cura el cáncer"
+    review = RawReview(claim, "Bulo", _SOURCE)
+    verifier = ArchiveVerifier(provider=FakeProvider({claim: [review]}), cache=InMemoryCache())
+    result = verifier.verify(claim)
+    assert result.verdict is Verdict.FALSE
+    assert result.light is Light.RED
+
+
 # --- Criterio 2: miss -> abstención --------------------------------------------
 
 def test_archive_miss_abstains() -> None:

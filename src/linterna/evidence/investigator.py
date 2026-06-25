@@ -38,11 +38,22 @@ _SYSTEM_PROMPT = (
     "Sos un asistente de investigación. NO sos un oráculo: no declares si una afirmación es "
     "verdadera o falsa. Razoná ÚNICAMENTE sobre la evidencia provista (no uses conocimiento "
     "propio ni inventes datos) y resumí qué dicen las fuentes, ponderando su confiabilidad: "
-    "las de confiabilidad 'alta' pesan; las 'desconocida' son contexto, no prueba. "
-    "Si la evidencia confiable es escasa o contradictoria, decílo. "
+    "las de confiabilidad 'alta' pesan; las 'desconocida' son contexto, no prueba.\n"
+    "Reglas para no confirmar de más:\n"
+    "- Distinguí entre que EXISTA un dato o correlación y que la afirmación, TAL COMO está "
+    "formulada, sea correcta. Si las fuentes confiables aportan contexto, causas o matices "
+    "que la afirmación omite o tergiversa (por ejemplo, atribuir a causas innatas o genéticas "
+    "algo que las fuentes explican por factores ambientales, sociales o metodológicos), eso "
+    "NO es 'supports': es 'refutes' o 'mixed'.\n"
+    "- Para afirmaciones sobre características inherentes de grupos (raza, etnia, género, "
+    "religión, nacionalidad u origen), las fuentes serias suelen rechazar la interpretación "
+    "esencialista aunque mencionen diferencias observadas; en esos casos no la respaldes.\n"
+    "- Si la evidencia confiable es escasa, contradictoria o no aborda la afirmación, usá "
+    "'insufficient' o 'mixed'.\n"
+    "- La explicación debe incluir el contexto o matiz clave, no un dato aislado.\n"
     'Respondé SOLO con un JSON: {"stance": "supports|refutes|mixed|insufficient", '
-    '"support_pct": <0-100, % de la evidencia confiable que respalda la afirmación>, '
-    '"explanation": "<resumen breve y fiel, sin tomar partido>", '
+    '"support_pct": <0-100, % de la evidencia confiable que respalda la afirmación tal como '
+    'está formulada>, "explanation": "<resumen breve y fiel, con el matiz clave>", '
     '"cited_source_ids": ["<id>", ...]}. Citá solo ids de la evidencia provista.'
 )
 
@@ -50,16 +61,32 @@ _SYSTEM_PROMPT = (
 class InvestigatorAgent:
     """Recupera evidencia confiable y describe su lean, sin emitir veredictos de verdad."""
 
-    def __init__(self, *, retriever: EvidenceRetriever, llm: LLMClient, max_tokens: int = 800) -> None:
+    def __init__(
+        self,
+        *,
+        retriever: EvidenceRetriever,
+        llm: LLMClient,
+        max_tokens: int = 3072,
+        synthesize: bool = False,
+    ) -> None:
         self._retriever = retriever
         self._llm = llm
         self._max_tokens = max_tokens
+        # synthesize=False (default SEGURO): no se pide veredicto/lean al modelo; se ofrecen
+        # fuentes confiables como puntos de partida. La síntesis (lean + %) sobre evidencia
+        # web puede confirmar de más afirmaciones cargadas (p. ej. presentar como "respaldado"
+        # una brecha que las fuentes atribuyen a factores ambientales). Hasta resolver eso de
+        # forma robusta, queda detrás de este flag. Ver docs/milestone-3-agent.md.
+        self._synthesize = synthesize
 
     def investigate(self, claim: str) -> VerificationResult:
         # Descarta fuentes marginales/desinformantes antes de razonar.
         evidence = [e for e in self._retriever.retrieve(claim) if tier_of(e.url) is not Tier.DENY]
         if not evidence:
             return _abstain("No se recuperó evidencia de fuentes confiables.")
+
+        if not self._synthesize:
+            return _leads(evidence)
 
         messages = self._build_messages(claim, evidence)
         result = self._llm.complete(
@@ -136,6 +163,23 @@ def _parse_response(text: str) -> dict[str, Any] | None:
     except json.JSONDecodeError:
         return None
     return parsed if isinstance(parsed, dict) else None
+
+
+def _leads(evidence: list[Evidence]) -> VerificationResult:
+    """Modo seguro: sin veredicto ni síntesis del modelo. Ofrece fuentes confiables como
+    puntos de partida (las de alta confiabilidad primero), para que la persona investigue."""
+    ordered = sorted(evidence, key=lambda e: tier_of(e.url) is not Tier.HIGH)
+    sources = tuple(e.as_source() for e in ordered[:5])
+    return VerificationResult(
+        verdict=Verdict.INSUFFICIENT,
+        light=light_for(Verdict.INSUFFICIENT),
+        explanation=(
+            "No encontramos una verificación humana de esta afirmación. No emitimos una "
+            "conclusión propia: estas fuentes pueden ayudarte a investigarla con tu criterio."
+        ),
+        sources=sources,
+        kind="evidencia",
+    )
 
 
 def _abstain(reason: str) -> VerificationResult:
