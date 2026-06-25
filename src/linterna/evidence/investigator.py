@@ -167,9 +167,11 @@ def _parse_response(text: str) -> dict[str, Any] | None:
 
 def _leads(evidence: list[Evidence]) -> VerificationResult:
     """Modo seguro: sin veredicto ni síntesis del modelo. Ofrece fuentes confiables como
-    puntos de partida (las de alta confiabilidad primero), para que la persona investigue."""
-    ordered = sorted(evidence, key=lambda e: tier_of(e.url) is not Tier.HIGH)
-    sources = tuple(e.as_source() for e in ordered[:5])
+    puntos de partida. Si hay fuentes de alta confiabilidad, muestra SOLO esas (mejor que
+    mezclar con foros/desconocidas); si no, ofrece hasta 3 desconocidas como punto de inicio."""
+    high = [e for e in evidence if tier_of(e.url) is Tier.HIGH]
+    chosen = high[:5] if high else evidence[:3]
+    sources = tuple(e.as_source() for e in chosen)
     return VerificationResult(
         verdict=Verdict.INSUFFICIENT,
         light=light_for(Verdict.INSUFFICIENT),

@@ -183,27 +183,40 @@ function asked(claim) {
   return `<p class="asked"><span class="lbl">Afirmación consultada</span>${escapeHtml(claim)}</p>`;
 }
 
-function render(d, claim) {
-  if (d.is_abstention) {
-    out.innerHTML = asked(claim) + `<div class="card">
-      <p class="lead">Sin evidencia suficiente</p>
-      <p>No encontramos verificaciones ni evidencia validada para concluir.
-         <strong>Y eso es una respuesta válida</strong>, no una falla.</p>
-      <p class="note">${escapeHtml(d.explanation)}</p>
-    </div>`;
-    return;
-  }
-
-  const sources = d.sources.map(s => `
+function sourcesHtml(list) {
+  return (list || []).map(s => `
     <div class="src">
       <a href="${encodeURI(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.title || s.url)}</a>
       <div class="pub">${escapeHtml(s.publisher)}${s.reviewed_at ? ' · ' + escapeHtml(s.reviewed_at) : ''}</div>
     </div>`).join('');
+}
+
+function render(d, claim) {
+  if (d.is_abstention) {
+    const hasLeads = d.sources && d.sources.length;
+    if (hasLeads) {
+      // Sin verificación humana, pero hay fuentes confiables para empezar a investigar.
+      out.innerHTML = asked(claim) + `
+        <div class="card">
+          <p class="lead">Sin verificación humana — fuentes para investigar</p>
+          <p class="note">${escapeHtml(d.explanation)}</p>
+          ${sourcesHtml(d.sources)}
+        </div>`;
+    } else {
+      out.innerHTML = asked(claim) + `<div class="card">
+        <p class="lead">Sin evidencia suficiente</p>
+        <p>No encontramos verificaciones ni evidencia validada para concluir.
+           <strong>Y eso es una respuesta válida</strong>, no una falla.</p>
+        <p class="note">${escapeHtml(d.explanation)}</p>
+      </div>`;
+    }
+    return;
+  }
 
   out.innerHTML = asked(claim) + `
     <div class="card">
       <p class="lead">Esto es lo que encontramos — leelo y formá tu criterio</p>
-      ${sources}
+      ${sourcesHtml(d.sources)}
     </div>
     <button class="ghost" id="reveal">Mostrar lo que concluyen las fuentes →</button>
     <div id="v"></div>`;

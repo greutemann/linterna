@@ -154,7 +154,8 @@ def test_agent_uses_json_mode_and_zero_temperature() -> None:
 # --- modo seguro por defecto (synthesize=False): fuentes como leads, sin veredicto ------
 
 def test_safe_mode_offers_sources_without_model_verdict() -> None:
-    r, llm = FakeRetriever([_HIGH, _UNKNOWN]), FakeLLM(_json("supports", ["e1"], 99))
+    high2 = _ev("e9", "https://www.bbc.com/mundo/x")
+    r, llm = FakeRetriever([_HIGH, high2]), FakeLLM(_json("supports", ["e1"], 99))
     agent = InvestigatorAgent(retriever=r, llm=llm)  # synthesize=False por defecto
 
     result = agent.investigate("una afirmación cualquiera")
@@ -162,15 +163,21 @@ def test_safe_mode_offers_sources_without_model_verdict() -> None:
     assert llm.calls == 0  # NO se le pide veredicto/síntesis al modelo
     assert result.verdict is Verdict.INSUFFICIENT  # sin luz verde/roja
     assert result.support_pct is None
-    assert len(result.sources) == 2  # ofrece las fuentes como puntos de partida
+    assert len(result.sources) == 2  # ofrece las fuentes confiables como puntos de partida
 
 
-def test_safe_mode_drops_fringe_and_prioritizes_high_trust() -> None:
+def test_safe_mode_shows_only_high_trust_when_available() -> None:
     r, llm = FakeRetriever([_UNKNOWN, _DENY, _HIGH]), FakeLLM("{}")
     agent = InvestigatorAgent(retriever=r, llm=llm)
 
-    result = agent.investigate("x")
+    urls = [s.url for s in agent.investigate("x").sources]
+    assert urls == ["https://www.who.int/dengue"]  # solo la de alta confiabilidad
 
-    urls = [s.url for s in result.sources]
-    assert "https://www.infowars.com/x" not in urls  # fringe descartada
-    assert urls[0] == "https://www.who.int/dengue"   # alta confiabilidad primero
+
+def test_safe_mode_falls_back_to_unknown_when_no_high_trust() -> None:
+    r, llm = FakeRetriever([_UNKNOWN, _DENY]), FakeLLM("{}")
+    agent = InvestigatorAgent(retriever=r, llm=llm)
+
+    urls = [s.url for s in agent.investigate("x").sources]
+    assert "https://www.infowars.com/x" not in urls  # fringe descartada igual
+    assert "https://un-blog-cualquiera.com" in urls   # desconocida como punto de inicio

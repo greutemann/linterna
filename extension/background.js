@@ -109,24 +109,30 @@ function showPanel(msg) {
     return;
   }
 
-  const d = msg.data;
-  if (d.is_abstention) {
-    body.innerHTML = asked(msg.claim) + `<div class="card">
-      <p class="lead">Sin evidencia suficiente</p>
-      <p>No hay verificaciones ni evidencia validada para concluir.
-      <strong>Y eso es una respuesta válida</strong>, no una falla.</p>
-      <p class="note">${esc(d.explanation)}</p></div>`;
-    return;
-  }
-
-  const sources = (d.sources || []).map((s) => `
+  const sourcesHtml = (list) => (list || []).map((s) => `
     <div class="src">
       <a href="${encodeURI(s.url)}" target="_blank" rel="noopener">${esc(s.title || s.url)}</a>
       <div class="pub">${esc(s.publisher)}${s.reviewed_at ? " · " + esc(s.reviewed_at) : ""}</div>
     </div>`).join("");
 
+  const d = msg.data;
+  if (d.is_abstention) {
+    if (d.sources && d.sources.length) {
+      body.innerHTML = asked(msg.claim) + `<div class="card">
+        <p class="lead">Sin verificación humana — fuentes para investigar</p>
+        <p class="note">${esc(d.explanation)}</p>${sourcesHtml(d.sources)}</div>`;
+    } else {
+      body.innerHTML = asked(msg.claim) + `<div class="card">
+        <p class="lead">Sin evidencia suficiente</p>
+        <p>No hay verificaciones ni evidencia validada para concluir.
+        <strong>Y eso es una respuesta válida</strong>, no una falla.</p>
+        <p class="note">${esc(d.explanation)}</p></div>`;
+    }
+    return;
+  }
+
   body.innerHTML = asked(msg.claim) +
-    `<div class="card"><p class="lead">Esto es lo que encontramos — leelo y formá tu criterio</p>${sources}</div>
+    `<div class="card"><p class="lead">Esto es lo que encontramos — leelo y formá tu criterio</p>${sourcesHtml(d.sources)}</div>
      <button class="ghost" id="reveal">Mostrar lo que concluyen las fuentes →</button>
      <div id="v"></div>`;
 

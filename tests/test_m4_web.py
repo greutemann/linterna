@@ -69,6 +69,23 @@ def test_abstention_is_marked() -> None:
     assert body["sources"] == []
 
 
+_LEADS = VerificationResult(
+    verdict=Verdict.INSUFFICIENT,
+    light=Light.GREY,
+    explanation="No hay verificación humana; estas fuentes pueden ayudarte.",
+    sources=(Source(url="https://who.int/x", title="OMS", publisher="OMS"),),
+    kind="evidencia",
+)
+
+
+def test_leads_abstention_still_serializes_sources() -> None:
+    # Modo seguro del agente: abstención PERO con fuentes-guía. Deben llegar al cliente.
+    client, _p = _client(_LEADS)
+    body = client.post("/api/verify", json={"claim": "x"}).json()
+    assert body["is_abstention"] is True
+    assert body["sources"][0]["url"] == "https://who.int/x"
+
+
 def test_empty_claim_is_rejected() -> None:
     client, _p = _client(_VERDICT_RESULT)
     resp = client.post("/api/verify", json={"claim": "   "})
@@ -92,6 +109,8 @@ def test_index_page_served() -> None:
     assert "Afirmación consultada" in resp.text
     # Explica el esquema de verificación para quien quiera entenderlo.
     assert "Cómo verificamos" in resp.text
+    # Render de fuentes-guía cuando hay abstención con leads (modo seguro del agente).
+    assert "fuentes para investigar" in resp.text.lower()
 
 
 def test_privacy_page_served() -> None:
