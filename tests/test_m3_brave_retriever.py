@@ -6,7 +6,6 @@ es nuestra defensa: Brave no tiene corte de gasto, así que lo ponemos en códig
 
 from __future__ import annotations
 
-from datetime import date
 from typing import Any
 
 import pytest
@@ -111,7 +110,7 @@ def test_max_results_is_respected() -> None:
 
 def test_search_budget_hard_cap_blocks_call() -> None:
     transport = FakeTransport(_BRAVE_RESPONSE)
-    budget = SearchBudget(daily_max=2)
+    budget = SearchBudget(max_searches=2)
     retriever = BraveRetriever(api_key="k", transport=transport, budget=budget)
 
     retriever.retrieve("a")
@@ -122,12 +121,12 @@ def test_search_budget_hard_cap_blocks_call() -> None:
     assert transport.calls == 2  # la tercera NO llegó a llamar a Brave
 
 
-def test_search_budget_resets_per_day() -> None:
-    # today() lo consumen: constructor, ensure, charge, ensure (último ya es otro día).
-    days = iter([date(2026, 6, 22), date(2026, 6, 22), date(2026, 6, 22), date(2026, 6, 23)])
-    budget = SearchBudget(daily_max=1, today=lambda: next(days))
+def test_search_budget_resets_per_period() -> None:
+    # period_of() lo consumen: constructor, ensure, charge, ensure (último ya es otro período).
+    periods = iter(["2026-06", "2026-06", "2026-06", "2026-07"])
+    budget = SearchBudget(max_searches=1, period_of=lambda: next(periods))
 
     budget.ensure_within_cap()
     budget.charge()
-    # mismo día -> cortaría; pero el clock avanza al siguiente día -> resetea.
-    budget.ensure_within_cap()  # no lanza: nuevo día
+    # mismo período -> cortaría; pero avanza al siguiente -> resetea.
+    budget.ensure_within_cap()  # no lanza: nuevo período

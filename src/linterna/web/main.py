@@ -44,7 +44,10 @@ def build_default_pipeline() -> LinternaPipeline:
         cache=JsonFileCache(_cache_dir() / "archive.json"),  # solo ClaimReview público
     )
     retriever = EphemeralCachingRetriever(  # caché efímero en memoria (compliance Brave)
-        BraveRetriever(api_key=brave_api_key(), budget=SearchBudget(daily_max=200)),
+        # Freno best-effort: 200 búsquedas por período (default diario, en memoria por
+        # instancia). La garantía dura contra facturación es el plan de Brave ("Limit +
+        # Free", que pausa y no cobra). El contador es solo números, sin PII.
+        BraveRetriever(api_key=brave_api_key(), budget=SearchBudget(max_searches=200)),
         ttl_s=600,
     )
     router = RouterClient(RouterConfig.from_yaml(_router_config_path()))
