@@ -28,24 +28,35 @@ class Tier(str, Enum):
 
 # Dominios de alta confianza (semilla). Se compara por sufijo, así cubre subdominios.
 _HIGH = (
-    # Ciencia / salud / organismos oficiales
+    # Ciencia / organismos oficiales
     "who.int", "paho.org", "ops.org.ar", "nih.gov", "ncbi.nlm.nih.gov", "cdc.gov",
     "nature.com", "science.org", "thelancet.com", "nejm.org", "bmj.com", "cell.com",
-    "pnas.org", "plos.org", "cochrane.org", "europa.eu", "un.org", "oecd.org",
-    "argentina.gob.ar", "conicet.gov.ar", "ieee.org",
+    "pnas.org", "plos.org", "cochrane.org", "europa.eu", "un.org", "unesco.org",
+    "oecd.org", "imf.org", "worldbank.org", "ipcc.ch", "nasa.gov", "esa.int",
+    "noaa.gov", "usgs.gov", "fda.gov", "ema.europa.eu", "efsa.europa.eu",
+    "argentina.gob.ar", "conicet.gov.ar", "ieee.org", "acm.org",
+    # Salud / medicina basada en evidencia
+    "mayoclinic.org", "clevelandclinic.org", "medlineplus.gov", "hopkinsmedicine.org",
+    "nhs.uk", "cancer.gov", "cancer.org", "aecc.es", "seom.org", "healthline.com",
+    "medicalnewstoday.com", "uptodate.com", "msdmanuals.com", "kidshealth.org",
     # Enciclopédico / secundario
     "wikipedia.org", "britannica.com",
     # Fact-checking
     "chequeado.com", "maldita.es", "newtral.es", "factcheck.org", "politifact.com",
     "snopes.com", "afp.com", "factual.afp.com", "colombiacheck.com", "verificat.cat",
-    "fullfact.org", "apnews.com", "reuters.com",
+    "fullfact.org", "apnews.com", "reuters.com", "factchequeado.com",
+    "leadstories.com", "animalpolitico.com", "verificado.com.mx", "efe.com",
     # Medios establecidos
     "bbc.com", "bbc.co.uk", "nytimes.com", "washingtonpost.com", "theguardian.com",
+    "rtve.es", "elpais.com", "lanacion.com.ar", "clarin.com", "dw.com", "npr.org",
+    "nationalgeographic.com", "scientificamerican.com",
 )
 
-# Dominios descartados (semilla mínima de desinformación/pseudociencia conocida).
+# Dominios descartados (desinformación/pseudociencia conocida).
 _DENY = (
     "infowars.com", "naturalnews.com", "mercola.com", "breitbart.com",
+    "newspunch.com", "yournewswire.com", "beforeitsnews.com", "globalresearch.ca",
+    "davidicke.com", "zerohedge.com", "vaxxedthemovie.com",
 )
 
 
