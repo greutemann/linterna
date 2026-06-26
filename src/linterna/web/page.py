@@ -7,6 +7,88 @@ válida, presentada con calma, no como error.
 
 from __future__ import annotations
 
+ESQUEMA_HTML = """<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Linterna — Esquema de verificación</title>
+<style>
+  body{font-family:system-ui,sans-serif;max-width:760px;margin:0 auto;padding:48px 20px 80px;
+       color:#1a1a1a;line-height:1.6;background:#fbfbfa;}
+  h1{font-size:1.9rem;} h2{font-size:1.2rem;margin-top:32px;}
+  .muted{color:#6b7280;} a{color:#2563eb;}
+  code{background:#eef;padding:1px 5px;border-radius:4px;}
+  .step{border-left:3px solid #2563eb;padding:4px 0 4px 16px;margin:14px 0;}
+  .dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:6px;vertical-align:middle;}
+  .verde{background:#16a34a;}.rojo{background:#dc2626;}.gris{background:#9ca3af;}
+  table{border-collapse:collapse;width:100%;margin-top:8px;} td,th{border:1px solid #e5e7eb;padding:8px;text-align:left;}
+  .back{margin-bottom:20px;display:inline-block;}
+</style>
+</head>
+<body>
+  <a class="back" href="/">← Volver</a>
+  <h1>Esquema de verificación 🔦</h1>
+  <p class="muted">Cómo trabaja el framework de Linterna, en detalle. El método es público
+  y auditable — esa es la idea: la confianza vive en el método, no en el modelo de IA.</p>
+
+  <h2>Principio: no es un oráculo</h2>
+  <p>Linterna no te da "la verdad". Te muestra qué dicen las fuentes y te devuelve la decisión.
+  Cuando no sabe, lo dice. Un veredicto firme solo aparece cuando lo respalda una verificación
+  hecha por humanos; sobre todo lo demás, la herramienta aporta evidencia sin sentenciar.</p>
+
+  <h2>Los dos caminos</h2>
+  <div class="step"><strong>1. Archivo-primero (verificación humana).</strong> Ante una
+  afirmación, primero busca si periodistas y organizaciones de fact-checking ya la verificaron
+  (vía ClaimReview / Google Fact Check). Si existe —y habla de la misma afirmación—, muestra
+  su veredicto (<span class="dot verde"></span>verdadero / <span class="dot rojo"></span>falso)
+  con sus fuentes y fecha. La mayoría de las falsedades se reciclan: muchas se resuelven acá.</div>
+
+  <div class="step"><strong>2. Agente investigador (evidencia fresca).</strong> Si nadie la
+  verificó antes, recupera evidencia de la web, descartando fuentes marginales o
+  desinformantes y priorizando las confiables.</div>
+
+  <h2>Cautela asimétrica (la regla clave del agente)</h2>
+  <p>Desde evidencia web, el agente puede <strong>desmentir</strong> pero
+  <strong>nunca afirmar</strong>:</p>
+  <table>
+    <tr><th>Situación</th><th>Qué hace</th></tr>
+    <tr><td>Fuentes confiables <strong>contradicen</strong> la afirmación</td>
+        <td><span class="dot rojo"></span>La desmiente, con sus fuentes</td></tr>
+    <tr><td>La evidencia <strong>parecería respaldarla</strong></td>
+        <td>NO la afirma: ofrece fuentes confiables para que investigues</td></tr>
+    <tr><td>Disputado / sin evidencia confiable</td>
+        <td><span class="dot gris"></span>Fuentes-guía o abstención</td></tr>
+  </table>
+  <p class="muted">¿Por qué asimétrica? Desmentir una falsedad con un contraejemplo confiable
+  es seguro y útil. Confirmar una afirmación —sobre todo si es cargada o sensible— desde unos
+  resultados de búsqueda es donde anida el daño (puede reforzar un sesgo aplastando el matiz).
+  Por eso afirmar requiere verificación humana, no la palabra del modelo.</p>
+
+  <h2>Garantías de código (no dependen del modelo)</h2>
+  <ul>
+    <li><strong>Validación de citas determinística:</strong> el código —no el modelo— verifica
+    que cada fuente citada sea real y efectivamente recuperada. Cita inventada = rechazada.</li>
+    <li><strong>Curaduría de fuentes:</strong> los dominios se clasifican en confiabilidad
+    alta / desconocida / descartada. Las descartadas no se usan; un desmentido exige al menos
+    una fuente de alta confiabilidad. Las listas son públicas y versionadas.</li>
+    <li><strong>El modelo razona solo sobre evidencia recuperada</strong>, nunca aporta datos
+    de su entrenamiento, y a temperatura 0 para fidelidad.</li>
+    <li><strong>Abstención válida:</strong> sin evidencia confiable, lo dice. No inventar es
+    una respuesta correcta, no una falla.</li>
+  </ul>
+
+  <h2>Privacidad</h2>
+  <p>No se persisten datos personales de quien consulta; ninguna consulta se asocia a tu
+  identidad. Ver la <a href="/privacy">política de privacidad</a>.</p>
+
+  <h2>Abierto y corregible</h2>
+  <p>El código es abierto de punta a punta. La herramienta comete errores y los corrige a la
+  vista de todos; cualquiera puede reportar uno.</p>
+</body>
+</html>
+"""
+
 PRIVACY_HTML = """<!doctype html>
 <html lang="es">
 <head>
@@ -153,10 +235,12 @@ INDEX_HTML = """<!doctype html>
     </ol>
     <p class="muted">La confianza vive en este método —público y auditable—, no en el modelo
        de IA, que es reemplazable. Código abierto de punta a punta.</p>
+    <p><a href="/esquema">Ver el esquema de verificación completo →</a></p>
   </details>
 
   <footer class="foot">
-    <a href="/privacy">Privacidad</a> · <span class="muted">Servicio público · cero PII · open-source</span>
+    <a href="/esquema">Cómo funciona</a> · <a href="/privacy">Privacidad</a> ·
+    <span class="muted">Servicio público · cero PII · open-source</span>
   </footer>
 </main>
 

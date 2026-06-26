@@ -113,6 +113,16 @@ def test_index_page_served() -> None:
     assert "fuentes para investigar" in resp.text.lower()
 
 
+def test_scheme_page_served() -> None:
+    client, _p = _client(_VERDICT_RESULT)
+    resp = client.get("/esquema")
+    assert resp.status_code == 200
+    assert "text/html" in resp.headers["content-type"]
+    # Documenta el esquema de verificación del framework.
+    assert "esquema de verificación" in resp.text.lower()
+    assert "archivo" in resp.text.lower() and "asimétrica" in resp.text.lower()
+
+
 def test_privacy_page_served() -> None:
     client, _p = _client(_VERDICT_RESULT)
     resp = client.get("/privacy")
