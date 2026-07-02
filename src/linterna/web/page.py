@@ -83,8 +83,13 @@ ESQUEMA_HTML = """<!doctype html>
   identidad. Ver la <a href="/privacy">política de privacidad</a>.</p>
 
   <h2>Abierto y corregible</h2>
-  <p>El código es abierto de punta a punta. La herramienta comete errores y los corrige a la
-  vista de todos; cualquiera puede reportar uno.</p>
+  <p>El código es abierto de punta a punta (AGPL-3.0). La herramienta comete errores y los
+  corrige a la vista de todos; cualquiera puede reportar uno.</p>
+  <p>
+    <a href="https://github.com/greutemann/linterna" target="_blank" rel="noopener">Código en GitHub →</a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/greutemann/linterna/wiki" target="_blank" rel="noopener">Wiki (documentación) →</a>
+  </p>
 </body>
 </html>
 """
@@ -239,8 +244,10 @@ INDEX_HTML = """<!doctype html>
   </details>
 
   <footer class="foot">
-    <a href="/esquema">Cómo funciona</a> · <a href="/privacy">Privacidad</a> ·
-    <span class="muted">Servicio público · cero PII · open-source</span>
+    <a href="/esquema">Cómo funciona</a> ·
+    <a href="/privacy">Privacidad</a> ·
+    <a href="https://github.com/greutemann/linterna" target="_blank" rel="noopener">Código en GitHub</a> ·
+    <span class="muted">Servicio público · cero PII · open-source (AGPL-3.0)</span>
   </footer>
 </main>
 
