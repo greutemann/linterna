@@ -17,14 +17,21 @@ si fuera evidencia sólida.
 from __future__ import annotations
 
 import json
+import logging
 import re
 from typing import Any
 
 from linterna.evidence import Evidence, EvidenceRetriever
+from linterna.evidence.budget import SearchBudgetExceeded
 from linterna.evidence.reliability import Tier, tier_of
 from linterna.router import LLMClient, Message
 from linterna.types import Source, VerificationResult, Verdict, light_for
 from linterna.validation import FabricatedCitation, assert_all_recovered
+
+logger = logging.getLogger("linterna.evidence")
+
+# Marcador para alertas basadas en logs (Google Cloud Logging). Sin PII: solo el evento.
+_BUDGET_MARKER = "LINTERNA_SEARCH_BUDGET_REACHED"
 
 _SYSTEM_PROMPT = (
     "Sos un asistente de investigación. NO sos un oráculo: no declares si una afirmación es "
@@ -72,8 +79,15 @@ class InvestigatorAgent:
         self._synthesize = synthesize
 
     def investigate(self, claim: str) -> VerificationResult:
+        try:
+            recovered = self._retriever.retrieve(claim)
+        except SearchBudgetExceeded:
+            # Tope de búsquedas del período alcanzado: cortamos amable, no rompemos.
+            logger.warning(_BUDGET_MARKER)  # sin PII: solo el evento, para alertas por log
+            return _budget_exhausted()
+
         # Descarta fuentes marginales/desinformantes antes de razonar.
-        evidence = [e for e in self._retriever.retrieve(claim) if tier_of(e.url) is not Tier.DENY]
+        evidence = [e for e in recovered if tier_of(e.url) is not Tier.DENY]
         if not evidence:
             return _abstain("No se recuperó evidencia de fuentes confiables.")
 
@@ -171,6 +185,19 @@ def _leads(evidence: list[Evidence]) -> VerificationResult:
             "conclusión propia: estas fuentes pueden ayudarte a investigarla con tu criterio."
         ),
         sources=sources,
+        kind="evidencia",
+    )
+
+
+def _budget_exhausted() -> VerificationResult:
+    return VerificationResult(
+        verdict=Verdict.INSUFFICIENT,
+        light=light_for(Verdict.INSUFFICIENT),
+        explanation=(
+            "Alcanzamos el límite de consultas del período. Probá de nuevo más tarde — "
+            "es un tope para cuidar los costos del servicio, no una falla de tu consulta."
+        ),
+        sources=(),
         kind="evidencia",
     )
 

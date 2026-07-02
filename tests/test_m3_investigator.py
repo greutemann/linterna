@@ -8,6 +8,7 @@ Incluye la reproducción del incidente (afirmación dañina con fuentes fringe).
 from __future__ import annotations
 
 from linterna.evidence import Evidence
+from linterna.evidence.budget import SearchBudgetExceeded
 from linterna.evidence.investigator import InvestigatorAgent
 from linterna.router import LLMResult, Message
 from linterna.types import Light, Verdict
@@ -72,6 +73,21 @@ def _json(stance: str, ids: list[str], pct: int = 50) -> str:
 def test_no_evidence_abstains_without_calling_llm() -> None:
     agent, _r, llm = _agent([], "{}")
     assert agent.investigate("x").verdict is Verdict.INSUFFICIENT
+    assert llm.calls == 0
+
+
+def test_search_budget_exceeded_returns_graceful_message() -> None:
+    # Alcanzado el tope: corta amable (no rompe con 500) y no llama al modelo.
+    class BrokeRetriever:
+        def retrieve(self, claim: str) -> list[Evidence]:
+            raise SearchBudgetExceeded("tope")
+
+    llm = FakeLLM("{}")
+    agent = InvestigatorAgent(retriever=BrokeRetriever(), llm=llm, synthesize=True)
+    result = agent.investigate("x")
+
+    assert result.verdict is Verdict.INSUFFICIENT
+    assert "límite de consultas" in result.explanation.lower()
     assert llm.calls == 0
 
 
