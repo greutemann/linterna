@@ -112,13 +112,10 @@ Toda contribución debe respetar los invariantes de `CLAUDE.md`.
 Se prevé un consejo asesor de periodistas y verificadores. Documentar antes de cualquier
 adopción institucional.
 
-## Licencias *(a confirmar — decisión abierta)*
+## Licencia
 
-Propuesta inicial, marcada como tradeoff a decidir:
-
-- **Código:** `AGPL-3.0` — mantiene abiertas las derivaciones de un bien público
-  (incluso las ofrecidas como servicio). Alternativa si se busca máxima adopción: `Apache-2.0`.
+- **Código:** [`AGPL-3.0`](./LICENSE) — mantiene abiertas las derivaciones de un bien
+  público, **incluso las ofrecidas como servicio** (quien corra una versión modificada debe
+  liberar su código). Coherente con el espíritu del proyecto: el método es público y no se
+  puede cerrar.
 - **Contenido y datos de verificación:** `CC BY 4.0` (consistente con el ecosistema de fact-checking).
-
-> Decisión pendiente del responsable del proyecto. No es un detalle menor: define quién
-> puede cerrar el código mañana.
