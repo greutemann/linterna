@@ -100,6 +100,23 @@ def test_negation_polarity_inverts_too() -> None:
     assert verifier.verify(claim).verdict is Verdict.TRUE
 
 
+def test_same_negative_polarity_applies_verdict_directly() -> None:
+    # Caso real de producción: la consulta YA es la versión negada ("nunca llegó") y la
+    # verificación compuesta también niega («fue falso y nunca llegó» → Falso). MISMA
+    # polaridad (ambas negativas, aunque usen marcadores distintos) -> el Falso se aplica
+    # directo, NO se invierte.
+    claim = "El hombre nunca llegó a la Luna"
+    review = RawReview(
+        "Stanley Kubrick confiesa que el alunizaje fue falso y el hombre nunca llegó a la Luna",
+        "Falso",
+        Source(url="https://maldita.es/k", title="Kubrick alunizaje", publisher="Maldita.es"),
+    )
+    verifier = ArchiveVerifier(provider=FakeProvider({claim: [review]}), cache=InMemoryCache())
+    result = verifier.verify(claim)
+    assert result.verdict is Verdict.FALSE  # nunca "Verdadero" por doble inversión
+    assert result.light is Light.RED
+
+
 def test_opposite_polarity_true_inverts_to_false() -> None:
     # Confirmaron la afirmación contraria -> la consulta es falsa.
     claim = "El hombre nunca llegó a la Luna"

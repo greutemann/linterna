@@ -104,15 +104,21 @@ def _same_claim(claim: str, matched: str) -> bool:
     return overlap >= _SIMILARITY_THRESHOLD
 
 
+def _is_negated(text: str) -> bool:
+    """¿El texto tiene polaridad negativa? (negación o marco de 'bulo/montaje')."""
+    tn = _normalize(text)
+    words = set(tn.split())
+    return any(w in words for w in _NEGATION_WORDS) or any(m in tn for m in _HOAX_MARKERS)
+
+
 def _polarity_mismatch(claim: str, matched: str) -> bool:
-    """¿La afirmación verificada tiene polaridad OPUESTA a la consulta? (negación o marco
-    de 'bulo/montaje' presente en una y no en la otra). Si es así, no se puede aplicar el
-    veredicto tal cual: significaría lo contrario."""
-    qn, mn = _normalize(claim), _normalize(matched)
-    qw, mw = set(qn.split()), set(mn.split())
-    if any((w in qw) != (w in mw) for w in _NEGATION_WORDS):
-        return True
-    return any((m in qn) != (m in mn) for m in _HOAX_MARKERS)
+    """¿La afirmación verificada tiene polaridad OPUESTA a la consulta?
+
+    La polaridad de un texto es BINARIA (¿tiene algún marcador de negación/bulo?), no
+    por-palabra: una afirmación compuesta («el alunizaje fue falso y nunca llegó») usa
+    varios marcadores para UNA sola negación. Comparar marcador por marcador invertía mal
+    cuando ambos lados negaban con palabras distintas."""
+    return _is_negated(claim) != _is_negated(matched)
 
 
 class ArchiveVerifier:
