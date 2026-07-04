@@ -35,17 +35,26 @@ _HIGH = (
     "oecd.org", "imf.org", "worldbank.org", "ipcc.ch", "nasa.gov", "esa.int",
     "noaa.gov", "usgs.gov", "fda.gov", "ema.europa.eu", "efsa.europa.eu",
     "argentina.gob.ar", "conicet.gov.ar", "ieee.org", "acm.org",
+    # Ciencia / academia (bases arbitradas, preprints, agencias de ciencia)
+    "scielo.org", "scielo.org.mx", "scielo.org.ar", "scielo.br", "redalyc.org",
+    "sciencedirect.com", "link.springer.com", "springer.com", "arxiv.org",
+    "agenciasinc.es", "csic.es", "nist.gov", "w3.org", "mit.edu", "stanford.edu",
+    "harvard.edu", "ox.ac.uk", "cam.ac.uk", "uba.ar", "unam.mx",
     # Salud / medicina basada en evidencia
     "mayoclinic.org", "clevelandclinic.org", "medlineplus.gov", "hopkinsmedicine.org",
     "nhs.uk", "cancer.gov", "cancer.org", "aecc.es", "seom.org", "healthline.com",
     "medicalnewstoday.com", "uptodate.com", "msdmanuals.com", "kidshealth.org",
     # Enciclopédico / secundario
     "wikipedia.org", "britannica.com",
-    # Fact-checking
+    # Fact-checking (signatarios IFCN y agencias establecidas)
     "chequeado.com", "maldita.es", "newtral.es", "factcheck.org", "politifact.com",
-    "snopes.com", "afp.com", "factual.afp.com", "colombiacheck.com", "verificat.cat",
-    "fullfact.org", "apnews.com", "reuters.com", "factchequeado.com",
-    "leadstories.com", "animalpolitico.com", "verificado.com.mx", "efe.com",
+    "snopes.com", "afp.com", "factual.afp.com", "factcheck.afp.com", "colombiacheck.com",
+    "verificat.cat", "fullfact.org", "apnews.com", "reuters.com", "factchequeado.com",
+    "leadstories.com", "animalpolitico.com", "grupoanimal.mx", "verificado.com.mx",
+    "efe.com", "cotejo.info", "boliviaverifica.bo", "malaespinacheck.cl",
+    "lasillavacia.com", "cazadoresdefakenews.info", "africacheck.org",
+    "dpa-factchecking.com", "correctiv.org", "science.feedback.org", "sciencefeedback.co",
+    "factly.in",
     # Medios establecidos
     "bbc.com", "bbc.co.uk", "nytimes.com", "washingtonpost.com", "theguardian.com",
     "rtve.es", "elpais.com", "lanacion.com.ar", "clarin.com", "dw.com", "npr.org",

@@ -23,3 +23,19 @@ def test_unknown_domains() -> None:
 
 def test_www_prefix_is_ignored() -> None:
     assert tier_of("https://www.nature.com/articles/x") is Tier.HIGH
+
+
+def test_expanded_science_and_academia_domains() -> None:
+    assert tier_of("https://www.scielo.org.ar/scielo.php?pid=x") is Tier.HIGH
+    assert tier_of("https://arxiv.org/abs/2401.00001") is Tier.HIGH
+    assert tier_of("https://www.agenciasinc.es/Noticias/x") is Tier.HIGH
+    assert tier_of("https://news.mit.edu/2026/x") is Tier.HIGH
+    assert tier_of("https://www.redalyc.org/articulo.oa?id=x") is Tier.HIGH
+
+
+def test_expanded_ifcn_factcheckers() -> None:
+    assert tier_of("https://science.feedback.org/review/x") is Tier.HIGH
+    assert tier_of("https://boliviaverifica.bo/x") is Tier.HIGH
+    assert tier_of("https://malaespinacheck.cl/x") is Tier.HIGH
+    assert tier_of("https://grupoanimal.mx/verificacion-viral/x") is Tier.HIGH
+    assert tier_of("https://factcheck.afp.com/x") is Tier.HIGH
