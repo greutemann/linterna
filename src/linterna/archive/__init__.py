@@ -151,9 +151,11 @@ class ArchiveVerifier:
 
         top = relevant[0]
         # Polaridad opuesta (ej. verificaron "fue un montaje"→Falso, consultaste que SÍ pasó):
-        # no aplicamos el veredicto invertido; mostramos la verificación como relacionada.
+        # el veredicto se INVIERTE por lógica proposicional (¬A falsa ⟹ A verdadera). Es
+        # determinístico y transparente: la explicación muestra la afirmación contraria y su
+        # calificación original. Ver docs/proposal-polaridad.md.
         if _polarity_mismatch(claim, top.matched_claim):
-            return self._related(top, sources)
+            return self._inverted_or_related(top, sources)
 
         verdict = _rating_to_verdict(top.textual_rating)
         return VerificationResult(
@@ -164,14 +166,31 @@ class ArchiveVerifier:
         )
 
     @staticmethod
-    def _related(review: RawReview, sources: tuple[Source, ...]) -> VerificationResult:
+    def _inverted_or_related(review: RawReview, sources: tuple[Source, ...]) -> VerificationResult:
+        original = _rating_to_verdict(review.textual_rating)
+        # Solo se invierten los veredictos nítidos; Engañoso/Disputado no sobreviven una
+        # negación con su matiz intacto -> se muestran como verificación relacionada.
+        inverted = {Verdict.FALSE: Verdict.TRUE, Verdict.TRUE: Verdict.FALSE}.get(original)
+        if inverted is None:
+            return VerificationResult(
+                verdict=Verdict.INSUFFICIENT,
+                light=Light.GREY,
+                explanation=(
+                    f"{review.source.publisher} verificó una afirmación relacionada "
+                    f"(«{review.matched_claim}» → «{review.textual_rating}»), pero puede tener "
+                    "sentido OPUESTO a tu consulta. No emitimos veredicto: leé la fuente y juzgá."
+                ),
+                sources=sources,
+            )
+
+        accion = "desmintió" if original is Verdict.FALSE else "confirmó"
         return VerificationResult(
-            verdict=Verdict.INSUFFICIENT,
-            light=Light.GREY,
+            verdict=inverted,
+            light=_VERDICT_TO_LIGHT[inverted],
             explanation=(
-                f"{review.source.publisher} verificó una afirmación relacionada "
-                f"(«{review.matched_claim}» → «{review.textual_rating}»), pero puede tener "
-                "sentido OPUESTO a tu consulta. No emitimos veredicto: leé la fuente y juzgá."
+                f"{review.source.publisher} {accion} la afirmación contraria "
+                f"(«{review.matched_claim}» → «{review.textual_rating}»), lo que "
+                f"{'respalda' if inverted is Verdict.TRUE else 'contradice'} tu consulta."
             ),
             sources=sources,
         )

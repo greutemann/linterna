@@ -70,9 +70,10 @@ def test_bulo_rating_maps_to_false() -> None:
     assert result.light is Light.RED
 
 
-def test_opposite_polarity_does_not_apply_inverted_verdict() -> None:
-    # El bug real: verificaron "el viaje a la Luna fue un montaje" (Falso), pero la consulta
-    # es la afirmación OPUESTA (verdadera). No debe salir "Falso" rojo.
+def test_opposite_polarity_inverts_the_verdict() -> None:
+    # El caso real: verificaron "el viaje a la Luna fue un montaje" → Falso. La consulta es
+    # la afirmación OPUESTA (verdadera). Desmentir lo contrario ES confirmar la consulta:
+    # veredicto invertido determinísticamente → Verdadero (verde), citando la misma fuente.
     claim = "El hombre llegó a la Luna en 1969"
     review = RawReview(
         "El viaje del hombre a la Luna en 1969 fue un montaje",
@@ -82,18 +83,44 @@ def test_opposite_polarity_does_not_apply_inverted_verdict() -> None:
     verifier = ArchiveVerifier(provider=FakeProvider({claim: [review]}), cache=InMemoryCache())
     result = verifier.verify(claim)
 
-    assert result.verdict is Verdict.INSUFFICIENT  # NO Falso/rojo
-    assert result.light is Light.GREY
-    assert len(result.sources) == 1  # muestra la fuente como verificación relacionada
-    assert "opuesto" in result.explanation.lower() or "relacionada" in result.explanation.lower()
+    assert result.verdict is Verdict.TRUE  # 🟢 (jamás el Falso invertido)
+    assert result.light is Light.GREEN
+    assert len(result.sources) == 1
+    # Transparencia: la explicación muestra la afirmación contraria verificada y su rating.
+    assert "contraria" in result.explanation.lower()
+    assert "montaje" in result.explanation.lower()
 
 
-def test_negation_polarity_is_detected() -> None:
-    # "las vacunas NO causan autismo" vs verificación de "las vacunas causan autismo" (Falso).
+def test_negation_polarity_inverts_too() -> None:
+    # "las vacunas NO causan autismo" vs verificación de "las vacunas causan autismo" (Falso)
+    # -> la consulta (negada) queda confirmada: Verdadero.
     claim = "Las vacunas no causan autismo"
     review = RawReview("Las vacunas causan autismo", "Falso", _SOURCE)
     verifier = ArchiveVerifier(provider=FakeProvider({claim: [review]}), cache=InMemoryCache())
-    assert verifier.verify(claim).verdict is Verdict.INSUFFICIENT  # no aplica el Falso invertido
+    assert verifier.verify(claim).verdict is Verdict.TRUE
+
+
+def test_opposite_polarity_true_inverts_to_false() -> None:
+    # Confirmaron la afirmación contraria -> la consulta es falsa.
+    claim = "El hombre nunca llegó a la Luna"
+    review = RawReview("El hombre llegó a la Luna", "Verdadero", _SOURCE)
+    verifier = ArchiveVerifier(provider=FakeProvider({claim: [review]}), cache=InMemoryCache())
+    result = verifier.verify(claim)
+    assert result.verdict is Verdict.FALSE
+    assert result.light is Light.RED
+
+
+def test_opposite_polarity_with_nuanced_rating_stays_related() -> None:
+    # Engañoso/Disputado no se invierten (el matiz no sobrevive una negación) -> gris.
+    claim = "El hombre llegó a la Luna en 1969"
+    review = RawReview(
+        "El viaje del hombre a la Luna en 1969 fue un montaje", "Engañoso", _SOURCE
+    )
+    verifier = ArchiveVerifier(provider=FakeProvider({claim: [review]}), cache=InMemoryCache())
+    result = verifier.verify(claim)
+    assert result.verdict is Verdict.INSUFFICIENT
+    assert result.light is Light.GREY
+    assert len(result.sources) == 1  # igual muestra la verificación relacionada
 
 
 def test_same_polarity_still_applies_verdict() -> None:
