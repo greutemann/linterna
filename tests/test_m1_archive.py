@@ -70,6 +70,48 @@ def test_bulo_rating_maps_to_false() -> None:
     assert result.light is Light.RED
 
 
+def test_opposite_polarity_does_not_apply_inverted_verdict() -> None:
+    # El bug real: verificaron "el viaje a la Luna fue un montaje" (Falso), pero la consulta
+    # es la afirmación OPUESTA (verdadera). No debe salir "Falso" rojo.
+    claim = "El hombre llegó a la Luna en 1969"
+    review = RawReview(
+        "El viaje del hombre a la Luna en 1969 fue un montaje",
+        "Falso",
+        Source(url="https://maldita.es/x", title="Montaje lunar", publisher="Maldita.es"),
+    )
+    verifier = ArchiveVerifier(provider=FakeProvider({claim: [review]}), cache=InMemoryCache())
+    result = verifier.verify(claim)
+
+    assert result.verdict is Verdict.INSUFFICIENT  # NO Falso/rojo
+    assert result.light is Light.GREY
+    assert len(result.sources) == 1  # muestra la fuente como verificación relacionada
+    assert "opuesto" in result.explanation.lower() or "relacionada" in result.explanation.lower()
+
+
+def test_negation_polarity_is_detected() -> None:
+    # "las vacunas NO causan autismo" vs verificación de "las vacunas causan autismo" (Falso).
+    claim = "Las vacunas no causan autismo"
+    review = RawReview("Las vacunas causan autismo", "Falso", _SOURCE)
+    verifier = ArchiveVerifier(provider=FakeProvider({claim: [review]}), cache=InMemoryCache())
+    assert verifier.verify(claim).verdict is Verdict.INSUFFICIENT  # no aplica el Falso invertido
+
+
+def test_same_polarity_still_applies_verdict() -> None:
+    # Sin marcadores de polaridad, el veredicto se aplica normal.
+    claim = "La Tierra es plana"
+    review = RawReview("La Tierra es plana", "Falso", _SOURCE)
+    verifier = ArchiveVerifier(provider=FakeProvider({claim: [review]}), cache=InMemoryCache())
+    assert verifier.verify(claim).verdict is Verdict.FALSE
+
+
+def test_explanation_shows_verified_claim() -> None:
+    claim = "La vacuna contiene microchips"
+    review = RawReview("La vacuna contiene microchips", "Falso", _SOURCE)
+    verifier = ArchiveVerifier(provider=FakeProvider({claim: [review]}), cache=InMemoryCache())
+    # Transparencia: la explicación muestra la afirmación exacta que se verificó.
+    assert "La vacuna contiene microchips" in verifier.verify(claim).explanation
+
+
 # --- Criterio 2: miss -> abstención --------------------------------------------
 
 def test_archive_miss_abstains() -> None:

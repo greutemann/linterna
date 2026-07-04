@@ -54,6 +54,16 @@ _STOPWORDS = frozenset(
 # ClaimReview habla de la MISMA afirmación que la consulta.
 _SIMILARITY_THRESHOLD = 0.6
 
+# Marcadores de polaridad: si aparecen en la afirmación verificada pero NO en la consulta
+# (o viceversa), es probable que el veredicto tenga sentido OPUESTO al de la consulta
+# (ej. verificaron "el viaje a la luna fue un montaje"→Falso, pero consultaste que SÍ llegó).
+# La comparación por palabras no detecta negaciones; esto sí, de forma acotada.
+_NEGATION_WORDS = frozenset({"no", "nunca", "jamas", "tampoco", "ningun", "ninguna", "ningún"})
+_HOAX_MARKERS = (
+    "montaje", "farsa", "invento", "inventada", "bulo", "fake", "hoax", "conspiracion",
+    "mentira", "engano", "enganos", "falso", "falsa", "ficticio", "ficticia",
+)
+
 _VERDICT_TO_LIGHT: dict[Verdict, Light] = {
     Verdict.TRUE: Light.GREEN,
     Verdict.FALSE: Light.RED,
@@ -94,6 +104,17 @@ def _same_claim(claim: str, matched: str) -> bool:
     return overlap >= _SIMILARITY_THRESHOLD
 
 
+def _polarity_mismatch(claim: str, matched: str) -> bool:
+    """¿La afirmación verificada tiene polaridad OPUESTA a la consulta? (negación o marco
+    de 'bulo/montaje' presente en una y no en la otra). Si es así, no se puede aplicar el
+    veredicto tal cual: significaría lo contrario."""
+    qn, mn = _normalize(claim), _normalize(matched)
+    qw, mw = set(qn.split()), set(mn.split())
+    if any((w in qw) != (w in mw) for w in _NEGATION_WORDS):
+        return True
+    return any((m in qn) != (m in mn) for m in _HOAX_MARKERS)
+
+
 class ArchiveVerifier:
     """Pipeline archivo-primero: caché -> proveedor -> validación -> veredicto/abstención."""
 
@@ -128,11 +149,30 @@ class ArchiveVerifier:
         # Validación determinística: toda fuente de salida debe estar recuperada.
         sources = assert_all_recovered(recovered, recovered)
 
-        verdict = _rating_to_verdict(relevant[0].textual_rating)
+        top = relevant[0]
+        # Polaridad opuesta (ej. verificaron "fue un montaje"→Falso, consultaste que SÍ pasó):
+        # no aplicamos el veredicto invertido; mostramos la verificación como relacionada.
+        if _polarity_mismatch(claim, top.matched_claim):
+            return self._related(top, sources)
+
+        verdict = _rating_to_verdict(top.textual_rating)
         return VerificationResult(
             verdict=verdict,
             light=_VERDICT_TO_LIGHT[verdict],
-            explanation=self._explain(relevant[0]),
+            explanation=self._explain(top),
+            sources=sources,
+        )
+
+    @staticmethod
+    def _related(review: RawReview, sources: tuple[Source, ...]) -> VerificationResult:
+        return VerificationResult(
+            verdict=Verdict.INSUFFICIENT,
+            light=Light.GREY,
+            explanation=(
+                f"{review.source.publisher} verificó una afirmación relacionada "
+                f"(«{review.matched_claim}» → «{review.textual_rating}»), pero puede tener "
+                "sentido OPUESTO a tu consulta. No emitimos veredicto: leé la fuente y juzgá."
+            ),
             sources=sources,
         )
 
@@ -152,7 +192,10 @@ class ArchiveVerifier:
     def _explain(review: RawReview) -> str:
         src = review.source
         fecha = f" (revisado {src.reviewed_at})" if src.reviewed_at else ""
-        return f"{src.publisher} calificó esta afirmación como «{review.textual_rating}»{fecha}."
+        # Mostramos la afirmación EXACTA que se verificó (transparencia): así, si difiere
+        # de la consulta, la persona lo ve.
+        verificada = f" «{review.matched_claim}»" if review.matched_claim else " esta afirmación"
+        return f"{src.publisher} verificó{verificada} y la calificó «{review.textual_rating}»{fecha}."
 
 
 __all__ = ["ArchiveVerifier", "ClaimReviewProvider", "RawReview"]
